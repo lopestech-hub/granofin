@@ -53,17 +53,20 @@ async function main() {
     })
   }
 
-  // Rotas da API
-  await app.register(authRoutes, { prefix: '/auth' })
-  await app.register(usuariosRoutes, { prefix: '/usuarios' })
-  await app.register(contasRoutes, { prefix: '/contas' })
-  await app.register(categoriasRoutes, { prefix: '/categorias' })
-  await app.register(lancamentosRoutes, { prefix: '/lancamentos' })
-  await app.register(orcamentosRoutes, { prefix: '/orcamentos' })
-  await app.register(relatoriosRoutes, { prefix: '/relatorios' })
-  await app.register(assinaturasRoutes, { prefix: '/assinaturas' })
-  await app.register(webhooksRoutes, { prefix: '/webhooks' })
-  await app.register(contasPagarRoutes, { prefix: '/contas-pagar' })
+  // Rotas da API sob o prefixo /api para não conflitar com rotas do React (SPA)
+  await app.register(async (api) => {
+    await api.register(authRoutes, { prefix: '/auth' })
+    await api.register(usuariosRoutes, { prefix: '/usuarios' })
+    await api.register(contasRoutes, { prefix: '/contas' })
+    await api.register(categoriasRoutes, { prefix: '/categorias' })
+    await api.register(lancamentosRoutes, { prefix: '/lancamentos' })
+    await api.register(orcamentosRoutes, { prefix: '/orcamentos' })
+    await api.register(relatoriosRoutes, { prefix: '/relatorios' })
+    await api.register(assinaturasRoutes, { prefix: '/assinaturas' })
+    await api.register(webhooksRoutes, { prefix: '/webhooks' })
+    await api.register(contasPagarRoutes, { prefix: '/contas-pagar' })
+  }, { prefix: '/api' })
+
 
   // Health check
   app.get('/health', async () => ({ status: 'ok', timestamp: new Date().toISOString() }))

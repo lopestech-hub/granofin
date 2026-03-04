@@ -485,24 +485,22 @@ _Nenhum até o momento._
 
 ## 📅 Última Sessão — O que foi feito e testado
 
-- 2026-03-04: **Módulo Contas a Pagar implementado**
-  - Cloudflare R2 configurado para armazenamento de comprovantes
-  - `backend/scripts/add-contas-pagar.ts` — migration executada com sucesso (tabela + enums + FKs + índices + trigger)
-  - `backend/prisma/schema.prisma` — adicionados `contas_pagar`, `ContaPagarStatus`, `RecorrenciaTipo`
-  - `backend/src/plugins/r2.ts` — plugin R2 com `uploadComprovante` e `deletarComprovante`
-  - `backend/src/routes/contas-pagar/` — 8 endpoints completos (listar, resumo, detalhe, criar, editar, deletar, baixar, upload comprovante)
-  - `frontend/src/services/contasPagar.ts` — service tipado
-  - `frontend/src/services/api.ts` — adicionado `postForm` para upload multipart (FormData detectado automaticamente)
-  - `frontend/src/pages/contas-pagar/ContasPagarPage.tsx` — página completa com KPIs, filtros, lista, modal criar (única/parcelada/recorrente), modal baixar, upload comprovante
-  - `AppShell.tsx` — item "Contas a Pagar" com ícone `CalendarClock` no sidebar
-  - `App.tsx` — rota `/contas-pagar` registrada
-  - @fastify/multipart@8 instalado (compatível com Fastify 4)
-  - Backend porta 3000 ✅ | Frontend porta 5174 ✅
+- 2026-03-04: **Redesign visual completo do frontend + deploy**
+  - `frontend/src/index.css` — fundo corrigido para `bg-slate-50`, `font-feature-settings` Inter habilitado
+  - `frontend/src/pages/auth/LoginPage.tsx` — split layout (painel esquerdo `bg-slate-900` + form direito), animações de entrada com `motion/react`, botão com `whileTap`
+  - `frontend/src/pages/auth/CadastroPage.tsx` — mesmo padrão do Login, painel com lista de benefícios do trial
+  - `frontend/src/pages/dashboard/DashboardPage.tsx` — KPI cards com stagger (`fadeUp` variants + `custom` index), gráfico refinado, lista de lançamentos com fade por item, `EASE` tipado como `[number, number, number, number]`
+  - `frontend/src/components/layout/AppShell.tsx` — indicador ativo animado com `layoutId="sidebar-active"`, overlay mobile com `AnimatePresence`, hover mais sutil
+  - `frontend/src/pages/contas/ContasPage.tsx` — animação de entrada `motion.div`
+  - `frontend/src/pages/lancamentos/LancamentosPage.tsx` — animação de entrada `motion.div`
+  - `.design-engineer/system.md` — padrões de animação motion/react documentados
+  - TypeScript: zero erros (`npx tsc --noEmit`)
+  - Deploy: push para GitHub → EasyPanel auto-deploy (commit `cf240a7`)
 
 ## ➡️ Próximos Passos
 
-1. Criar repositório no GitHub e conectar ao EasyPanel para auto-deploy
-2. **Criar bucket no Cloudflare R2** e verificar URL pública (R2_PUBLIC_URL configurada no .env)
+1. Verificar saúde do deploy no EasyPanel (URL: [applications-granofin.tbs25p.easypanel.host](https://applications-granofin.tbs25p.easypanel.host))
+2. **Criar bucket no Cloudflare R2** e configurar variáveis R2_* no EasyPanel
 3. Iniciar **Fase 3**: integração Stripe (checkout, webhooks, controle de acesso por plano), tela de assinatura/upgrade, relatórios com gráfico de pizza por categoria
 
 ## 📅 Histórico de Mudanças
@@ -514,3 +512,4 @@ _Nenhum até o momento._
 | 2026-03-03 | Fase 2 concluída — layout, dashboard, contas, lançamentos, orçamentos + sistema de design            |
 | 2026-03-03 | Campo `telefone` adicionado à tabela `usuarios` — migration, schema, backend e frontend atualizados  |
 | 2026-03-04 | Módulo Contas a Pagar implementado — tabela, 8 rotas backend, plugin R2, página frontend completa    |
+| 2026-03-04 | Redesign visual completo — split auth, animações motion/react, sidebar refinada, deploy EasyPanel    |

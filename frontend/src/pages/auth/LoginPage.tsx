@@ -4,7 +4,8 @@ import { z } from 'zod'
 import { Link, useNavigate } from 'react-router-dom'
 import toast from 'react-hot-toast'
 import { motion } from 'motion/react'
-import { TrendingUp, ArrowRight } from 'lucide-react'
+import { ArrowRight } from 'lucide-react'
+import { Logo } from '@/components/ui/Logo'
 import { api, ApiError } from '@/services/api'
 import { useAuthStore } from '@/store/auth'
 
@@ -49,12 +50,7 @@ export default function LoginPage() {
         className="hidden lg:flex lg:w-[480px] xl:w-[520px] flex-col justify-between bg-slate-900 px-12 py-12 flex-shrink-0"
       >
         {/* Logo */}
-        <div className="flex items-center gap-2.5">
-          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-green-600">
-            <TrendingUp className="h-4 w-4 text-white" />
-          </div>
-          <span className="text-lg font-bold text-white tracking-tight">Granofin</span>
-        </div>
+        <Logo variant="light" size="md" />
 
         {/* Mensagem central */}
         <div className="space-y-6">
@@ -99,12 +95,7 @@ export default function LoginPage() {
           className="w-full max-w-sm"
         >
           {/* Logo mobile */}
-          <div className="flex items-center gap-2.5 mb-8 lg:hidden">
-            <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-green-600">
-              <TrendingUp className="h-3.5 w-3.5 text-white" />
-            </div>
-            <span className="text-base font-bold text-slate-900 tracking-tight">Granofin</span>
-          </div>
+          <Logo variant="dark" size="sm" className="mb-8 lg:hidden" />
 
           {/* Cabeçalho */}
           <div className="mb-8">

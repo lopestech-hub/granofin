@@ -1,6 +1,6 @@
 // Cliente HTTP centralizado — todas as chamadas à API passam por aqui
 
-const BASE_URL = ''
+const BASE_URL = '/api'
 
 class ApiError extends Error {
   constructor(
@@ -67,7 +67,7 @@ async function tentarRefresh(): Promise<boolean> {
   if (!refreshToken) return false
 
   try {
-    const res = await fetch('/auth/refresh', {
+    const res = await fetch('/api/auth/refresh', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ refresh_token: refreshToken }),

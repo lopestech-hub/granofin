@@ -9,8 +9,8 @@ import {
   Settings,
   LogOut,
   Menu,
-  TrendingUp,
 } from 'lucide-react'
+import { Logo } from '@/components/ui/Logo'
 import { motion, AnimatePresence } from 'motion/react'
 import { useAuthStore } from '@/store/auth'
 import { api } from '@/services/api'
@@ -36,7 +36,7 @@ export default function AppShell({ children }: Props) {
   const handleLogout = async () => {
     const refreshToken = localStorage.getItem('refresh_token')
     if (refreshToken) {
-      await api.post('/auth/logout', { refresh_token: refreshToken }).catch(() => {})
+      await api.post('/auth/logout', { refresh_token: refreshToken }).catch(() => { })
     }
     logout()
     navigate('/auth/login')
@@ -77,11 +77,8 @@ export default function AppShell({ children }: Props) {
         `}
       >
         {/* Logo */}
-        <div className="flex h-14 items-center gap-2.5 px-5 border-b border-slate-800/60">
-          <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-green-600">
-            <TrendingUp className="h-[15px] w-[15px] text-white" />
-          </div>
-          <span className="text-[15px] font-bold text-white tracking-tight">Granofin</span>
+        <div className="flex h-14 items-center px-5 border-b border-slate-800/60">
+          <Logo variant="light" size="sm" />
         </div>
 
         {/* Nav */}
@@ -121,11 +118,10 @@ export default function AppShell({ children }: Props) {
           <Link
             to="/configuracoes"
             onClick={() => setMenuAberto(false)}
-            className={`flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors duration-150 ${
-              location.pathname === '/configuracoes'
+            className={`flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors duration-150 ${location.pathname === '/configuracoes'
                 ? 'bg-slate-800 text-white'
                 : 'text-slate-500 hover:bg-slate-800/70 hover:text-slate-200'
-            }`}
+              }`}
           >
             <Settings className="h-4 w-4" />
             Configurações
@@ -162,12 +158,7 @@ export default function AppShell({ children }: Props) {
           >
             <Menu className="h-5 w-5" />
           </button>
-          <div className="flex items-center gap-2">
-            <div className="flex h-6 w-6 items-center justify-center rounded-md bg-green-600">
-              <TrendingUp className="h-3.5 w-3.5 text-white" />
-            </div>
-            <span className="font-bold text-slate-900 tracking-tight">Granofin</span>
-          </div>
+          <Logo variant="dark" size="sm" />
           <div className="w-9" />
         </header>
 

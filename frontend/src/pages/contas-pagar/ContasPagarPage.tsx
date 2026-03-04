@@ -26,8 +26,8 @@ const schemaCriar = z.object({
   data_vencimento: z.string().min(1, 'Data obrigatória'),
   observacoes: z.string().optional(),
   recorrencia: z.enum(['NENHUMA', 'DIARIA', 'SEMANAL', 'QUINZENAL', 'MENSAL', 'BIMESTRAL', 'TRIMESTRAL', 'SEMESTRAL', 'ANUAL']).default('NENHUMA'),
-  total_ocorrencias: z.coerce.number().int().min(2).max(120).optional(),
-  total_parcelas: z.coerce.number().int().min(2).max(120).optional(),
+  total_ocorrencias: z.preprocess((v) => (v === '' ? undefined : v), z.coerce.number().int().min(2).max(120).optional()),
+  total_parcelas: z.preprocess((v) => (v === '' ? undefined : v), z.coerce.number().int().min(2).max(120).optional()),
   tipo_criacao: z.enum(['unica', 'parcelada', 'recorrente']).default('unica'),
 })
 type FormCriar = z.infer<typeof schemaCriar>
@@ -210,6 +210,7 @@ export default function ContasPagarPage() {
       valor: form.valor,
       data_vencimento: form.data_vencimento,
       observacoes: form.observacoes || undefined,
+      recorrencia: 'NENHUMA',
     }
 
     if (editando) {
@@ -217,9 +218,21 @@ export default function ContasPagarPage() {
       return
     }
 
-    if (form.tipo_criacao === 'parcelada' && form.total_parcelas) {
+    if (form.tipo_criacao === 'parcelada') {
+      if (!form.total_parcelas) {
+        toast.error('Informe o número de parcelas')
+        return
+      }
       payload.total_parcelas = form.total_parcelas
     } else if (form.tipo_criacao === 'recorrente') {
+      if (!form.recorrencia || form.recorrencia === 'NENHUMA') {
+        toast.error('Selecione uma frequência de recorrência')
+        return
+      }
+      if (!form.total_ocorrencias) {
+        toast.error('Informe a quantidade de ocorrências')
+        return
+      }
       payload.recorrencia = form.recorrencia
       payload.total_ocorrencias = form.total_ocorrencias
     }
@@ -310,11 +323,10 @@ export default function ContasPagarPage() {
             <button
               key={s}
               onClick={() => setFiltroStatus(s)}
-              className={`h-8 px-3 rounded-lg text-xs font-medium transition-colors ${
-                filtroStatus === s
+              className={`h-8 px-3 rounded-lg text-xs font-medium transition-colors ${filtroStatus === s
                   ? 'bg-slate-900 text-white'
                   : 'bg-white border border-slate-200 text-slate-600 hover:border-slate-300'
-              }`}
+                }`}
             >
               {s === 'TODOS' ? 'Todas' : STATUS_LABELS[s]}
             </button>
@@ -352,9 +364,8 @@ export default function ContasPagarPage() {
               return (
                 <div
                   key={conta.id}
-                  className={`flex items-center gap-4 rounded-xl bg-white border shadow-sm p-4 hover:border-slate-300 transition-colors ${
-                    vencida ? 'border-red-200' : 'border-slate-200'
-                  }`}
+                  className={`flex items-center gap-4 rounded-xl bg-white border shadow-sm p-4 hover:border-slate-300 transition-colors ${vencida ? 'border-red-200' : 'border-slate-200'
+                    }`}
                 >
                   {/* Ícone categoria */}
                   <div
@@ -382,9 +393,8 @@ export default function ContasPagarPage() {
                     <div className="flex items-center gap-3 mt-0.5">
                       <span className="text-xs text-slate-400">{conta.categoria?.nome}</span>
                       <span className="text-xs text-slate-300">•</span>
-                      <span className={`flex items-center gap-1 text-xs font-medium ${
-                        vencida ? 'text-red-600' : 'text-slate-500'
-                      }`}>
+                      <span className={`flex items-center gap-1 text-xs font-medium ${vencida ? 'text-red-600' : 'text-slate-500'
+                        }`}>
                         <CalendarDays className="h-3 w-3" />
                         {formatarData(conta.data_vencimento)}
                       </span>
@@ -528,11 +538,10 @@ export default function ContasPagarPage() {
                 ].map(({ value, label }) => (
                   <label
                     key={value}
-                    className={`flex items-center justify-center rounded-lg border px-3 py-2 text-xs font-medium cursor-pointer transition-colors ${
-                      tipoCriacao === value
+                    className={`flex items-center justify-center rounded-lg border px-3 py-2 text-xs font-medium cursor-pointer transition-colors ${tipoCriacao === value
                         ? 'border-green-500 bg-green-50 text-green-700'
                         : 'border-slate-200 text-slate-600 hover:border-slate-300'
-                    }`}
+                      }`}
                   >
                     <input {...registerCriar('tipo_criacao')} type="radio" value={value} className="hidden" />
                     {label}
