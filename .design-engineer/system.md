@@ -134,7 +134,14 @@ Tailwind: `shadow-sm` para cards, `shadow-md` para modais/dropdowns.
 - Tamanho sidebar: h-5 w-5
 - Tamanho card ícone: h-10 w-10 p-2.5 rounded-xl bg-slate-100 text-slate-600
 
-## Animações
-- Hover: transition-colors duration-150
-- Modal open: sem spring, apenas opacity/scale 150ms
-- Micro: 100-150ms ease-out
+## Animações (motion/react)
+- Easing padrão: [0.25, 1, 0.5, 1]
+- Entrada de página: `initial={{ opacity: 0, y: 10 }}` animate 300ms
+- Stagger de cards: delay incremental de 70ms por item (custom variants fadeUp)
+- Listas: opacity 0→1 com delay por item (25ms cada)
+- Sidebar active indicator: layoutId="sidebar-active" 200ms
+- Overlay mobile: AnimatePresence com opacity 150ms
+- Botões: whileTap={{ scale: 0.98 }}
+- Auth split layout: painel esquerdo x:-24→0 500ms, form y:16→0 450ms delay:0.1
+- Nunca usar spring/bouncy em finance UI
+- Lib: `motion/react` (motion v11+)

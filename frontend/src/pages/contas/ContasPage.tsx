@@ -4,6 +4,7 @@ import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import { Plus, Pencil, Trash2, Wallet, CreditCard, PiggyBank, CircleEllipsis } from 'lucide-react'
+import { motion } from 'motion/react'
 import toast from 'react-hot-toast'
 import AppShell from '@/components/layout/AppShell'
 import Modal from '@/components/ui/Modal'
@@ -105,7 +106,12 @@ export default function ContasPage() {
 
   return (
     <AppShell>
-      <div className="p-6 max-w-4xl mx-auto space-y-6">
+      <motion.div
+        initial={{ opacity: 0, y: 10 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.3, ease: [0.25, 1, 0.5, 1] }}
+        className="p-6 max-w-4xl mx-auto space-y-6"
+      >
         {/* Cabeçalho */}
         <div className="flex items-center justify-between">
           <div>
@@ -185,7 +191,7 @@ export default function ContasPage() {
             ))}
           </div>
         )}
-      </div>
+      </motion.div>
 
       {/* Modal criar/editar */}
       <Modal

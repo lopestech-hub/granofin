@@ -3,6 +3,8 @@ import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import { Link, useNavigate } from 'react-router-dom'
 import toast from 'react-hot-toast'
+import { motion } from 'motion/react'
+import { TrendingUp, ArrowRight } from 'lucide-react'
 import { api, ApiError } from '@/services/api'
 import { useAuthStore } from '@/store/auth'
 
@@ -20,7 +22,7 @@ const schema = z.object({
 type FormData = z.infer<typeof schema>
 
 const inputClass =
-  'w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm outline-none focus:border-green-500 focus:ring-2 focus:ring-green-100 transition-colors'
+  'w-full h-10 rounded-lg border border-slate-300 px-3 text-sm text-slate-900 placeholder:text-slate-400 focus:border-green-500 focus:ring-2 focus:ring-green-100 outline-none transition-all'
 
 export default function CadastroPage() {
   const navigate = useNavigate()
@@ -50,70 +52,120 @@ export default function CadastroPage() {
   }
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-slate-50 px-4">
-      <div className="w-full max-w-md">
-        <div className="mb-8 text-center">
-          <h1 className="text-3xl font-bold text-green-600">Granofin</h1>
-          <p className="mt-2 text-slate-500">Crie sua conta grátis — 14 dias sem cartão</p>
+    <div className="flex min-h-screen bg-slate-50">
+      {/* Painel esquerdo — branding */}
+      <motion.div
+        initial={{ opacity: 0, x: -24 }}
+        animate={{ opacity: 1, x: 0 }}
+        transition={{ duration: 0.5, ease: [0.25, 1, 0.5, 1] }}
+        className="hidden lg:flex lg:w-[480px] xl:w-[520px] flex-col justify-between bg-slate-900 px-12 py-12 flex-shrink-0"
+      >
+        <div className="flex items-center gap-2.5">
+          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-green-600">
+            <TrendingUp className="h-4 w-4 text-white" />
+          </div>
+          <span className="text-lg font-bold text-white tracking-tight">Granofin</span>
         </div>
 
-        <form
-          onSubmit={handleSubmit(onSubmit)}
-          className="rounded-2xl bg-white p-8 shadow-sm border border-slate-200"
+        <div className="space-y-5">
+          <p className="text-xs font-medium uppercase tracking-widest text-green-500">Comece gratuitamente</p>
+          <h2 className="text-3xl font-bold text-white leading-tight tracking-tight">
+            14 dias grátis.<br />Sem cartão.
+          </h2>
+          <p className="text-slate-400 text-base leading-relaxed max-w-xs">
+            Crie sua conta em segundos e comece a organizar suas finanças hoje mesmo.
+          </p>
+
+          <div className="rounded-xl border border-slate-800 p-5 space-y-3 mt-4">
+            <p className="text-xs font-medium text-slate-500 uppercase tracking-wide">Trial inclui</p>
+            {[
+              'Contas e lançamentos ilimitados',
+              'Orçamentos por categoria',
+              'Contas a pagar com recorrência',
+              'Relatórios e gráficos de evolução',
+            ].map((item) => (
+              <div key={item} className="flex items-center gap-3">
+                <div className="h-1.5 w-1.5 rounded-full bg-green-500 flex-shrink-0" />
+                <span className="text-sm text-slate-400">{item}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        <p className="text-xs text-slate-600">
+          © {new Date().getFullYear()} Granofin. Todos os direitos reservados.
+        </p>
+      </motion.div>
+
+      {/* Painel direito — formulário */}
+      <div className="flex flex-1 items-center justify-center px-6 py-12">
+        <motion.div
+          initial={{ opacity: 0, y: 16 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.45, ease: [0.25, 1, 0.5, 1], delay: 0.1 }}
+          className="w-full max-w-sm"
         >
-          {/* Nome */}
-          <div className="mb-4">
-            <label className="mb-1.5 block text-sm font-medium text-slate-700">Nome</label>
-            <input {...register('nome')} type="text" placeholder="Seu nome completo" className={inputClass} />
-            {errors.nome && <p className="mt-1 text-xs text-red-500">{errors.nome.message}</p>}
+          <div className="flex items-center gap-2.5 mb-8 lg:hidden">
+            <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-green-600">
+              <TrendingUp className="h-3.5 w-3.5 text-white" />
+            </div>
+            <span className="text-base font-bold text-slate-900 tracking-tight">Granofin</span>
           </div>
 
-          {/* E-mail */}
-          <div className="mb-4">
-            <label className="mb-1.5 block text-sm font-medium text-slate-700">E-mail</label>
-            <input {...register('email')} type="email" placeholder="seu@email.com" className={inputClass} />
-            {errors.email && <p className="mt-1 text-xs text-red-500">{errors.email.message}</p>}
+          <div className="mb-8">
+            <h1 className="text-2xl font-bold text-slate-900 tracking-tight">Criar conta grátis</h1>
+            <p className="mt-1.5 text-sm text-slate-500">14 dias de trial sem precisar de cartão.</p>
           </div>
 
-          {/* Telefone */}
-          <div className="mb-4">
-            <label className="mb-1.5 block text-sm font-medium text-slate-700">Telefone</label>
-            <input
-              {...register('telefone')}
-              type="tel"
-              placeholder="(11) 99999-9999"
-              className={inputClass}
-            />
-            {errors.telefone && <p className="mt-1 text-xs text-red-500">{errors.telefone.message}</p>}
-          </div>
+          <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+            <div>
+              <label className="block text-xs font-medium text-slate-700 mb-1.5">Nome</label>
+              <input {...register('nome')} type="text" placeholder="Seu nome completo" autoComplete="name" className={inputClass} />
+              {errors.nome && <p className="mt-1 text-xs text-red-500">{errors.nome.message}</p>}
+            </div>
 
-          {/* Senha */}
-          <div className="mb-6">
-            <label className="mb-1.5 block text-sm font-medium text-slate-700">Senha</label>
-            <input
-              {...register('senha')}
-              type="password"
-              placeholder="Mínimo 8 caracteres"
-              className={inputClass}
-            />
-            {errors.senha && <p className="mt-1 text-xs text-red-500">{errors.senha.message}</p>}
-          </div>
+            <div>
+              <label className="block text-xs font-medium text-slate-700 mb-1.5">E-mail</label>
+              <input {...register('email')} type="email" placeholder="seu@email.com" autoComplete="email" className={inputClass} />
+              {errors.email && <p className="mt-1 text-xs text-red-500">{errors.email.message}</p>}
+            </div>
 
-          <button
-            type="submit"
-            disabled={isSubmitting}
-            className="w-full rounded-lg bg-green-600 py-2.5 text-sm font-semibold text-white transition hover:bg-green-700 disabled:opacity-60"
-          >
-            {isSubmitting ? 'Criando conta...' : 'Criar conta grátis'}
-          </button>
+            <div>
+              <label className="block text-xs font-medium text-slate-700 mb-1.5">Telefone</label>
+              <input {...register('telefone')} type="tel" placeholder="(11) 99999-9999" autoComplete="tel" className={inputClass} />
+              {errors.telefone && <p className="mt-1 text-xs text-red-500">{errors.telefone.message}</p>}
+            </div>
 
-          <p className="mt-4 text-center text-sm text-slate-500">
+            <div>
+              <label className="block text-xs font-medium text-slate-700 mb-1.5">Senha</label>
+              <input {...register('senha')} type="password" placeholder="Mínimo 8 caracteres" autoComplete="new-password" className={inputClass} />
+              {errors.senha && <p className="mt-1 text-xs text-red-500">{errors.senha.message}</p>}
+            </div>
+
+            <div className="pt-1">
+              <motion.button
+                type="submit"
+                disabled={isSubmitting}
+                whileTap={{ scale: 0.98 }}
+                className="flex w-full items-center justify-center gap-2 h-10 rounded-lg bg-green-600 text-sm font-semibold text-white hover:bg-green-700 transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
+              >
+                {isSubmitting ? 'Criando conta...' : (
+                  <>
+                    Criar conta grátis
+                    <ArrowRight className="h-4 w-4" />
+                  </>
+                )}
+              </motion.button>
+            </div>
+          </form>
+
+          <p className="mt-6 text-center text-sm text-slate-500">
             Já tem conta?{' '}
-            <Link to="/auth/login" className="font-medium text-green-600 hover:underline">
+            <Link to="/auth/login" className="font-semibold text-green-600 hover:text-green-700 transition-colors">
               Entrar
             </Link>
           </p>
-        </form>
+        </motion.div>
       </div>
     </div>
   )
