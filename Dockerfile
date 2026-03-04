@@ -18,6 +18,7 @@ RUN npm run build
 
 # Stage 3 — Imagem final
 FROM node:20-alpine
+RUN apk add --no-cache openssl
 ENV TZ=America/Sao_Paulo
 ENV NODE_ENV=production
 WORKDIR /app
