@@ -34,7 +34,6 @@ function CardMetrica({
   tipo: 'receita' | 'despesa' | 'saldo'
   quantidade?: number
 }) {
-  const positivo = tipo === 'receita' || (tipo === 'saldo' && valor >= 0)
   const Icon = tipo === 'receita' ? TrendingUp : tipo === 'despesa' ? TrendingDown : Wallet
 
   return (
@@ -75,14 +74,6 @@ function CardMetrica({
       </div>
     </div>
   )
-}
-
-const tooltipStyle = {
-  backgroundColor: '#fff',
-  border: '1px solid #e2e8f0',
-  borderRadius: '8px',
-  boxShadow: '0 4px 6px -1px rgba(0,0,0,0.07)',
-  fontSize: '13px',
 }
 
 function TooltipCustom({ active, payload, label }: any) {

@@ -9,7 +9,6 @@ import {
   Settings,
   LogOut,
   Menu,
-  X,
   TrendingUp,
 } from 'lucide-react'
 import { useAuthStore } from '@/store/auth'

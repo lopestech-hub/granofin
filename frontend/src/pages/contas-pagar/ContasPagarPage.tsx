@@ -180,7 +180,7 @@ export default function ContasPagarPage() {
   } = useForm<FormBaixar>({ resolver: zodResolver(schemaBaixar) })
 
   const tipoCriacao = watchCriar('tipo_criacao')
-  const recorrencia = watchCriar('recorrencia')
+  watchCriar('recorrencia')
 
   // ── Handlers ──
   function abrirEditar(conta: ContaPagar) {

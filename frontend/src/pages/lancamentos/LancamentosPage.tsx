@@ -5,7 +5,7 @@ import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import {
   Plus, ChevronLeft, ChevronRight, ArrowUpRight, ArrowDownRight,
-  Trash2, Pencil, CheckCircle2, Circle,
+  Trash2, Pencil, CheckCircle2,
 } from 'lucide-react'
 import toast from 'react-hot-toast'
 import AppShell from '@/components/layout/AppShell'

@@ -2,12 +2,6 @@
 
 const BASE_URL = ''
 
-interface ApiResponse<T = unknown> {
-  success: boolean
-  error?: string
-  [key: string]: unknown
-}
-
 class ApiError extends Error {
   constructor(
     public status: number,
