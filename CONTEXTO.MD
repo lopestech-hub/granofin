@@ -404,8 +404,8 @@ JWT_EXPIRES_IN=10h
 JWT_REFRESH_EXPIRES_IN=7d
 PORT=3000
 NODE_ENV=production
-FRONTEND_URL=https://app.granofin.com.br
-CORS_ORIGIN=https://app.granofin.com.br
+FRONTEND_URL=https://applications-granofin.tbs25p.easypanel.host
+CORS_ORIGIN=https://applications-granofin.tbs25p.easypanel.host
 STRIPE_SECRET_KEY=
 STRIPE_WEBHOOK_SECRET=
 STRIPE_PRICE_MENSAL=
@@ -424,6 +424,7 @@ TRIAL_DIAS=14
 - Dev backend: `cd backend && npm run dev`
 - Rodar migration: `cd backend && npx tsx scripts/nome.ts`
 - Build local: `docker build -t granofin .`
+- URL produção: https://applications-granofin.tbs25p.easypanel.host
 - Prisma Studio: `cd backend && npx prisma studio`
 
 ## 📋 Integrações Externas
