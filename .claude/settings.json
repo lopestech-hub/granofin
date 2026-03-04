@@ -1,0 +1,15 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(node -e \"console.log\\(require\\(''crypto''\\).randomBytes\\(40\\).toString\\(''hex''\\)\\)\")",
+      "Bash(npm install)",
+      "Bash(npx prisma migrate dev --name init)",
+      "Bash(npx tsx scripts/seed-categorias.ts)",
+      "Bash(npm run dev)",
+      "Bash(npx tsx --env-file=.env scripts/add-telefone-usuarios.ts)",
+      "Bash(npx prisma generate)",
+      "Bash(taskkill /F /IM node.exe)",
+      "Bash(npm install @fastify/multipart @aws-sdk/client-s3 @aws-sdk/lib-storage)"
+    ]
+  }
+}

@@ -1,0 +1,36 @@
+# Dependências
+node_modules/
+**/node_modules/
+
+# Build
+dist/
+**/dist/
+build/
+**/build/
+
+# Ambiente — NUNCA commitar
+.env
+**/.env
+.env.local
+.env.*.local
+
+# Prisma
+**/generated/
+
+# Logs
+*.log
+logs/
+
+# Sistema
+.DS_Store
+Thumbs.db
+
+# IDEs
+.vscode/settings.json
+.idea/
+*.swp
+*.swo
+
+# Cache
+.eslintcache
+*.tsbuildinfo

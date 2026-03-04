@@ -1,0 +1,239 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model usuarios {
+  id            String   @id @default(uuid())
+  nome          String
+  email         String   @unique
+  telefone      String?  @db.VarChar(20)
+  senha_hash    String
+  avatar_url    String?
+  criado_em     DateTime @default(now())
+  atualizado_em DateTime @updatedAt
+  deletado_em   DateTime?
+
+  assinatura     assinaturas?
+  contas         contas[]
+  categorias     categorias[]
+  lancamentos    lancamentos[]
+  orcamentos     orcamentos[]
+  refresh_tokens refresh_tokens[]
+  contas_pagar   contas_pagar[]
+
+  @@index([email])
+}
+
+model refresh_tokens {
+  id         String   @id @default(uuid())
+  usuario_id String
+  token_hash String   @unique
+  expira_em  DateTime
+  revogado   Boolean  @default(false)
+  criado_em  DateTime @default(now())
+
+  usuario usuarios @relation(fields: [usuario_id], references: [id])
+
+  @@index([usuario_id])
+  @@index([token_hash])
+}
+
+model assinaturas {
+  id                     String    @id @default(uuid())
+  usuario_id             String    @unique
+  stripe_customer_id     String?
+  stripe_subscription_id String?
+  plano                  PlanType  @default(TRIAL)
+  status                 SubStatus @default(TRIAL)
+  trial_expira_em        DateTime?
+  periodo_inicio         DateTime?
+  periodo_fim            DateTime?
+  criado_em              DateTime  @default(now())
+  atualizado_em          DateTime  @updatedAt
+
+  usuario usuarios @relation(fields: [usuario_id], references: [id])
+
+  @@index([usuario_id])
+  @@index([stripe_customer_id])
+}
+
+enum PlanType {
+  TRIAL
+  MENSAL
+  ANUAL
+}
+
+enum SubStatus {
+  TRIAL
+  ATIVO
+  CANCELADO
+  EXPIRADO
+  INADIMPLENTE
+}
+
+model contas {
+  id            String    @id @default(uuid())
+  usuario_id    String
+  nome          String
+  tipo          ContaTipo
+  saldo_inicial Decimal   @default(0) @db.Decimal(10, 2)
+  cor           String?
+  icone         String?
+  ativa         Boolean   @default(true)
+  criado_em     DateTime  @default(now())
+  atualizado_em DateTime  @updatedAt
+  deletado_em   DateTime?
+
+  usuario      usuarios       @relation(fields: [usuario_id], references: [id])
+  lancamentos  lancamentos[]
+  contas_pagar contas_pagar[]
+
+  @@index([usuario_id])
+}
+
+enum ContaTipo {
+  CARTEIRA
+  CONTA_CORRENTE
+  POUPANCA
+  OUTRO
+}
+
+model categorias {
+  id            String         @id @default(uuid())
+  usuario_id    String?
+  nome          String
+  tipo          LancamentoTipo
+  cor           String
+  icone         String
+  padrao        Boolean        @default(false)
+  criado_em     DateTime       @default(now())
+  atualizado_em DateTime       @updatedAt
+  deletado_em   DateTime?
+
+  usuario      usuarios?      @relation(fields: [usuario_id], references: [id])
+  lancamentos  lancamentos[]
+  orcamentos   orcamentos[]
+  contas_pagar contas_pagar[]
+
+  @@index([usuario_id])
+  @@index([tipo])
+}
+
+model lancamentos {
+  id             String         @id @default(uuid())
+  usuario_id     String
+  conta_id       String
+  categoria_id   String
+  descricao      String
+  valor          Decimal        @db.Decimal(10, 2)
+  tipo           LancamentoTipo
+  data           DateTime
+  efetivado      Boolean        @default(true)
+  observacoes    String?
+  parcela_atual  Int?
+  total_parcelas Int?
+  grupo_parcelas String?
+  criado_em      DateTime       @default(now())
+  atualizado_em  DateTime       @updatedAt
+  deletado_em    DateTime?
+
+  usuario      usuarios      @relation(fields: [usuario_id], references: [id])
+  conta        contas        @relation(fields: [conta_id], references: [id])
+  categoria    categorias    @relation(fields: [categoria_id], references: [id])
+  conta_pagar  contas_pagar?
+
+  @@index([usuario_id])
+  @@index([conta_id])
+  @@index([categoria_id])
+  @@index([data])
+  @@index([usuario_id, data])
+}
+
+enum LancamentoTipo {
+  RECEITA
+  DESPESA
+}
+
+model orcamentos {
+  id            String   @id @default(uuid())
+  usuario_id    String
+  categoria_id  String
+  valor_limite  Decimal  @db.Decimal(10, 2)
+  mes           Int
+  ano           Int
+  criado_em     DateTime @default(now())
+  atualizado_em DateTime @updatedAt
+
+  usuario   usuarios   @relation(fields: [usuario_id], references: [id])
+  categoria categorias @relation(fields: [categoria_id], references: [id])
+
+  @@unique([usuario_id, categoria_id, mes, ano])
+  @@index([usuario_id, mes, ano])
+}
+
+enum ContaPagarStatus {
+  PENDENTE
+  PAGO
+  VENCIDO
+  CANCELADO
+}
+
+enum RecorrenciaTipo {
+  NENHUMA
+  DIARIA
+  SEMANAL
+  QUINZENAL
+  MENSAL
+  BIMESTRAL
+  TRIMESTRAL
+  SEMESTRAL
+  ANUAL
+}
+
+model contas_pagar {
+  id                String           @id @default(uuid())
+  usuario_id        String
+  categoria_id      String
+  descricao         String
+  valor             Decimal          @db.Decimal(10, 2)
+  data_vencimento   DateTime
+  status            ContaPagarStatus @default(PENDENTE)
+
+  // Recorrência
+  recorrencia        RecorrenciaTipo @default(NENHUMA)
+  grupo_recorrencia  String?
+  ocorrencia_atual   Int?
+  total_ocorrencias  Int?
+
+  // Parcelamento
+  parcela_atual   Int?
+  total_parcelas  Int?
+  grupo_parcelas  String?
+
+  // Pagamento (preenchido ao baixar)
+  conta_id        String?
+  data_pagamento  DateTime?
+  lancamento_id   String?   @unique
+  comprovante_url String?
+
+  observacoes   String?
+  criado_em     DateTime  @default(now())
+  atualizado_em DateTime  @updatedAt
+  deletado_em   DateTime?
+
+  usuario    usuarios    @relation(fields: [usuario_id], references: [id])
+  categoria  categorias  @relation(fields: [categoria_id], references: [id])
+  conta      contas?     @relation(fields: [conta_id], references: [id])
+  lancamento lancamentos? @relation(fields: [lancamento_id], references: [id])
+
+  @@index([usuario_id])
+  @@index([usuario_id, status])
+  @@index([usuario_id, data_vencimento])
+  @@index([grupo_recorrencia])
+  @@index([grupo_parcelas])
+}
