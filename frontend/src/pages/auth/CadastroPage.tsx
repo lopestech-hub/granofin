@@ -4,36 +4,33 @@ import { z } from 'zod'
 import { Link, useNavigate } from 'react-router-dom'
 import toast from 'react-hot-toast'
 import { motion } from 'motion/react'
-import { ArrowRight } from 'lucide-react'
+import { ArrowRight, Gift, Layers, ShieldCheck, Heart } from 'lucide-react'
 import { Logo } from '@/components/ui/Logo'
 import { api, ApiError } from '@/services/api'
 import { useAuthStore } from '@/store/auth'
 
 const schema = z.object({
   nome: z.string().min(2, 'Nome deve ter ao menos 2 caracteres'),
-  email: z.string().email('E-mail inválido'),
+  email: z.string().email('E-mail invÃ¡lido'),
   telefone: z
     .string()
-    .min(10, 'Telefone inválido — inclua o DDD')
-    .max(20, 'Telefone inválido')
-    .regex(/^\+?[\d\s\(\)\-]+$/, 'Use apenas números, espaços, +, ( e )'),
+    .min(10, 'Telefone invÃ¡lido â€” inclua o DDD')
+    .max(20, 'Telefone invÃ¡lido')
+    .regex(/^\+?[\d\s\(\)\-]+$/, 'Use apenas nÃºmeros, espaÃ§os, +, ( e )'),
   senha: z.string().min(8, 'Senha deve ter ao menos 8 caracteres'),
 })
 
 type FormData = z.infer<typeof schema>
 
-const inputClass =
-  'w-full h-10 rounded-lg border border-slate-300 px-3 text-sm text-slate-900 placeholder:text-slate-400 focus:border-green-500 focus:ring-2 focus:ring-green-100 outline-none transition-all'
+const EASE = [0.25, 1, 0.5, 1] as [number, number, number, number]
 
 export default function CadastroPage() {
   const navigate = useNavigate()
   const login = useAuthStore((s) => s.login)
 
-  const {
-    register,
-    handleSubmit,
-    formState: { errors, isSubmitting },
-  } = useForm<FormData>({ resolver: zodResolver(schema) })
+  const { register, handleSubmit, formState: { errors, isSubmitting } } = useForm<FormData>({
+    resolver: zodResolver(schema)
+  })
 
   const onSubmit = async (data: FormData) => {
     try {
@@ -44,7 +41,7 @@ export default function CadastroPage() {
         usuario: any
       }>('/auth/cadastro', data)
       login(res.usuario, res.access_token, res.refresh_token)
-      toast.success('Conta criada! Aproveite seus 14 dias grátis.')
+      toast.success('Conta validada! BÃ´nus de 14 dias ativado.')
       navigate('/dashboard')
     } catch (err) {
       const msg = err instanceof ApiError ? err.message : 'Erro ao criar conta'
@@ -53,110 +50,140 @@ export default function CadastroPage() {
   }
 
   return (
-    <div className="flex min-h-screen bg-slate-50">
-      {/* Painel esquerdo — branding */}
+    <div className="flex min-h-screen bg-white">
+      {/* Visual Side (Left) */}
       <motion.div
-        initial={{ opacity: 0, x: -24 }}
-        animate={{ opacity: 1, x: 0 }}
-        transition={{ duration: 0.5, ease: [0.25, 1, 0.5, 1] }}
-        className="hidden lg:flex lg:w-[480px] xl:w-[520px] flex-col justify-between bg-slate-900 px-12 py-12 flex-shrink-0"
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        transition={{ duration: 1 }}
+        className="hidden lg:flex lg:w-[45%] xl:w-[50%] bg-slate-950 px-16 py-16 flex-shrink-0 relative overflow-hidden flex-col justify-between"
       >
-        <Logo variant="light" size="md" />
+        <Logo variant="light" size="md" className="relative z-10" />
 
-        <div className="space-y-5">
-          <p className="text-xs font-medium uppercase tracking-widest text-green-500">Comece gratuitamente</p>
-          <h2 className="text-3xl font-bold text-white leading-tight tracking-tight">
-            14 dias grátis.<br />Sem cartão.
-          </h2>
-          <p className="text-slate-400 text-base leading-relaxed max-w-xs">
-            Crie sua conta em segundos e comece a organizar suas finanças hoje mesmo.
-          </p>
+        <div className="relative z-10 max-w-lg space-y-12">
+          <motion.div
+            initial={{ y: 20, opacity: 0 }}
+            animate={{ y: 0, opacity: 1 }}
+            transition={{ delay: 0.3, duration: 0.6, ease: EASE }}
+          >
+            <span className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-green-500/10 text-green-400 text-[10px] font-black uppercase tracking-[0.2em] mb-6">
+              <Gift size={14} className="fill-current" />
+              Oferta exclusiva de lanÃ§amento
+            </span>
+            <h2 className="text-5xl font-black text-white leading-[1.1] tracking-tighter mb-6">
+              Organize sua vida <br />
+              em <span className="text-indigo-400">segundos</span>.
+            </h2>
+            <p className="text-slate-400 text-lg font-medium leading-relaxed">
+              Diga adeus Ã s planilhas complexas. Experimente a simplicidade do Granofin gratuitamente por 14 dias.
+            </p>
+          </motion.div>
 
-          <div className="rounded-xl border border-slate-800 p-5 space-y-3 mt-4">
-            <p className="text-xs font-medium text-slate-500 uppercase tracking-wide">Trial inclui</p>
+          <div className="space-y-4">
             {[
-              'Contas e lançamentos ilimitados',
-              'Orçamentos por categoria',
-              'Contas a pagar com recorrência',
-              'Relatórios e gráficos de evolução',
-            ].map((item) => (
-              <div key={item} className="flex items-center gap-3">
-                <div className="h-1.5 w-1.5 rounded-full bg-green-500 flex-shrink-0" />
-                <span className="text-sm text-slate-400">{item}</span>
-              </div>
+              { icon: Layers, text: 'GestÃ£o de contas ilimitadas' },
+              { icon: ShieldCheck, text: 'Privacidade de dados absoluto' },
+              { icon: Heart, text: 'Suporte prioritÃ¡rio 24/7' }
+            ].map((item, i) => (
+              <motion.div
+                key={item.text}
+                initial={{ opacity: 0, x: -10 }}
+                animate={{ opacity: 1, x: 0 }}
+                transition={{ delay: 0.6 + (i * 0.1) }}
+                className="flex items-center gap-4 group"
+              >
+                <div className="w-8 h-8 rounded-lg bg-white/5 flex items-center justify-center text-indigo-400 group-hover:bg-indigo-500 group-hover:text-white transition-all">
+                  <item.icon size={16} strokeWidth={2.5} />
+                </div>
+                <span className="text-sm font-bold text-slate-300 uppercase tracking-tight">{item.text}</span>
+              </motion.div>
             ))}
           </div>
         </div>
 
-        <p className="text-xs text-slate-600">
-          © {new Date().getFullYear()} Granofin. Todos os direitos reservados.
-        </p>
+        <div className="relative z-10 flex items-center justify-between text-[10px] font-bold uppercase tracking-widest text-slate-600">
+          <span>Membro da rede Granofin</span>
+          <span>VersÃ£o 2.0 Enterprise</span>
+        </div>
+
+        {/* Abstract Background Elements */}
+        <div className="absolute top-[-20%] left-[-10%] w-[500px] h-[500px] bg-green-600 rounded-full blur-[150px] opacity-10" />
       </motion.div>
 
-      {/* Painel direito — formulário */}
-      <div className="flex flex-1 items-center justify-center px-6 py-12">
-        <motion.div
-          initial={{ opacity: 0, y: 16 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.45, ease: [0.25, 1, 0.5, 1], delay: 0.1 }}
-          className="w-full max-w-sm"
-        >
-          <Logo variant="dark" size="sm" className="mb-8 lg:hidden" />
-
-          <div className="mb-8">
-            <h1 className="text-2xl font-bold text-slate-900 tracking-tight">Criar conta grátis</h1>
-            <p className="mt-1.5 text-sm text-slate-500">14 dias de trial sem precisar de cartão.</p>
-          </div>
-
-          <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
-            <div>
-              <label className="block text-xs font-medium text-slate-700 mb-1.5">Nome</label>
-              <input {...register('nome')} type="text" placeholder="Seu nome completo" autoComplete="name" className={inputClass} />
-              {errors.nome && <p className="mt-1 text-xs text-red-500">{errors.nome.message}</p>}
+      {/* Form Side (Right) */}
+      <div className="flex flex-1 items-center justify-center bg-slate-50/50">
+        <div className="w-full max-w-[420px] px-8 py-10">
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.6, ease: EASE, delay: 0.2 }}
+            className="space-y-10"
+          >
+            <div className="lg:hidden mb-12 flex justify-center">
+              <Logo variant="dark" size="sm" />
             </div>
 
-            <div>
-              <label className="block text-xs font-medium text-slate-700 mb-1.5">E-mail</label>
-              <input {...register('email')} type="email" placeholder="seu@email.com" autoComplete="email" className={inputClass} />
-              {errors.email && <p className="mt-1 text-xs text-red-500">{errors.email.message}</p>}
-            </div>
+            <header>
+              <h1 className="text-3xl font-black text-slate-900 tracking-tighter uppercase mb-2">Primeiros Passos</h1>
+              <p className="text-slate-500 font-medium italic text-sm">Crie seu perfil e receba seu passe livre de 14 dias.</p>
+            </header>
 
-            <div>
-              <label className="block text-xs font-medium text-slate-700 mb-1.5">Telefone</label>
-              <input {...register('telefone')} type="tel" placeholder="(11) 99999-9999" autoComplete="tel" className={inputClass} />
-              {errors.telefone && <p className="mt-1 text-xs text-red-500">{errors.telefone.message}</p>}
-            </div>
+            <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+              <div className="space-y-4">
+                <div>
+                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 block">Nome Completo</label>
+                  <input {...register('nome')} type="text" placeholder="Ex: JoÃ£o Silva" className="premium-input bg-white h-12" />
+                  {errors.nome && <p className="mt-2 text-[10px] text-rose-500 font-bold ml-1">{errors.nome.message}</p>}
+                </div>
 
-            <div>
-              <label className="block text-xs font-medium text-slate-700 mb-1.5">Senha</label>
-              <input {...register('senha')} type="password" placeholder="Mínimo 8 caracteres" autoComplete="new-password" className={inputClass} />
-              {errors.senha && <p className="mt-1 text-xs text-red-500">{errors.senha.message}</p>}
-            </div>
+                <div>
+                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 block">EndereÃ§o de Email</label>
+                  <input {...register('email')} type="email" placeholder="seu@email.com" className="premium-input bg-white h-12" />
+                  {errors.email && <p className="mt-2 text-[10px] text-rose-500 font-bold ml-1">{errors.email.message}</p>}
+                </div>
 
-            <div className="pt-1">
-              <motion.button
-                type="submit"
-                disabled={isSubmitting}
-                whileTap={{ scale: 0.98 }}
-                className="flex w-full items-center justify-center gap-2 h-10 rounded-lg bg-green-600 text-sm font-semibold text-white hover:bg-green-700 transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
-              >
-                {isSubmitting ? 'Criando conta...' : (
-                  <>
-                    Criar conta grátis
-                    <ArrowRight className="h-4 w-4" />
-                  </>
-                )}
-              </motion.button>
-            </div>
-          </form>
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 block">Telefone</label>
+                    <input {...register('telefone')} type="tel" placeholder="(11) 99999-9999" className="premium-input bg-white h-12" />
+                    {errors.telefone && <p className="mt-2 text-[10px] text-rose-500 font-bold ml-1">{errors.telefone.message}</p>}
+                  </div>
+                  <div>
+                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 block">Chave de SeguranÃ§a</label>
+                    <input {...register('senha')} type="password" placeholder="8+ caracteres" className="premium-input bg-white h-12" />
+                    {errors.senha && <p className="mt-2 text-[10px] text-rose-500 font-bold ml-1">{errors.senha.message}</p>}
+                  </div>
+                </div>
+              </div>
 
-          <p className="mt-6 text-center text-sm text-slate-500">
-            Já tem conta?{' '}
-            <Link to="/auth/login" className="font-semibold text-green-600 hover:text-green-700 transition-colors">
-              Entrar
-            </Link>
-          </p>
-        </motion.div>
+              <div className="pt-6">
+                <motion.button
+                  type="submit"
+                  disabled={isSubmitting}
+                  whileHover={{ scale: 1.01 }}
+                  whileTap={{ scale: 0.99 }}
+                  className="flex w-full items-center justify-center gap-3 h-14 rounded-2xl bg-indigo-600 text-sm font-black text-white shadow-xl shadow-indigo-600/20 hover:bg-indigo-700 transition-all disabled:opacity-50"
+                >
+                  {isSubmitting ? 'Validando Dados...' : (
+                    <>
+                      ATIVAR TRIAL GRÃTIS
+                      <ArrowRight size={18} strokeWidth={3} />
+                    </>
+                  )}
+                </motion.button>
+              </div>
+            </form>
+
+            <footer className="pt-8 border-t border-slate-200">
+              <p className="text-center text-xs font-bold text-slate-400 uppercase tracking-tight">
+                Já possui uma conta?{' '}
+                <Link to="/auth/login" className="text-indigo-600 hover:text-indigo-800 transition-colors ml-1">
+                  Efetuar Login
+                </Link>
+              </p>
+            </footer>
+          </motion.div>
+        </div>
       </div>
     </div>
   )

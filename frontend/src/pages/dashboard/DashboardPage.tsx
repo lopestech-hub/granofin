@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
+import { Link } from 'react-router-dom'
 import {
   AreaChart,
   Area,
@@ -15,8 +16,6 @@ import {
   Wallet,
   ChevronLeft,
   ChevronRight,
-  ArrowUpRight,
-  ArrowDownRight,
 } from 'lucide-react'
 import { motion } from 'motion/react'
 import AppShell from '@/components/layout/AppShell'
@@ -40,35 +39,33 @@ function CardMetrica({
   label,
   valor,
   tipo,
-  quantidade,
   index,
 }: {
   label: string
   valor: number
   tipo: 'receita' | 'despesa' | 'saldo'
-  quantidade?: number
   index: number
 }) {
   const Icon = tipo === 'receita' ? TrendingUp : tipo === 'despesa' ? TrendingDown : Wallet
 
   const config = {
     receita: {
-      iconBg: 'bg-green-50',
-      iconColor: 'text-green-600',
-      valueColor: 'text-green-700',
-      border: 'border-slate-200',
+      color: 'text-green-600',
+      iconBg: 'bg-green-500/10',
+      progressBg: 'bg-green-500',
+      percent: 100,
     },
     despesa: {
-      iconBg: 'bg-red-50',
-      iconColor: 'text-red-500',
-      valueColor: 'text-slate-900',
-      border: 'border-slate-200',
+      color: 'text-rose-600',
+      iconBg: 'bg-rose-500/10',
+      progressBg: 'bg-rose-500',
+      percent: 65,
     },
     saldo: {
-      iconBg: valor >= 0 ? 'bg-green-50' : 'bg-red-50',
-      iconColor: valor >= 0 ? 'text-green-600' : 'text-red-500',
-      valueColor: valor >= 0 ? 'text-green-700' : 'text-red-600',
-      border: valor >= 0 ? 'border-green-100' : 'border-red-100',
+      color: valor >= 0 ? 'text-indigo-600' : 'text-rose-600',
+      iconBg: valor >= 0 ? 'bg-indigo-500/10' : 'bg-rose-500/10',
+      progressBg: valor >= 0 ? 'bg-indigo-500' : 'bg-rose-500',
+      percent: 85,
     },
   }[tipo]
 
@@ -78,23 +75,27 @@ function CardMetrica({
       variants={fadeUp}
       initial="hidden"
       animate="visible"
-      className={`rounded-xl bg-white border ${config.border} shadow-sm p-5`}
+      className="card-premium group p-5 relative overflow-hidden"
     >
-      <div className="flex items-start justify-between">
-        <div className="flex-1 min-w-0">
-          <p className="text-xs font-medium text-slate-500 uppercase tracking-widest">{label}</p>
-          <p className={`mt-2.5 text-[1.625rem] font-bold font-mono tabular-nums tracking-tight leading-none ${config.valueColor}`}>
+      <div className="flex justify-between items-start mb-4">
+        <div className={`p-2 rounded-xl ${config.iconBg} ${config.color} transition-transform group-hover:scale-110 duration-300`}>
+          <Icon size={20} strokeWidth={2.5} />
+        </div>
+        <div className="flex flex-col items-end">
+          <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">{label}</span>
+          <span className={`text-2xl font-bold tabular-nums tracking-tight tracking-[-0.03em] ${config.color}`}>
             {formatarMoeda(valor)}
-          </p>
-          {quantidade !== undefined && (
-            <p className="mt-2 text-xs text-slate-400">
-              {quantidade} {quantidade === 1 ? 'lançamento' : 'lançamentos'}
-            </p>
-          )}
+          </span>
         </div>
-        <div className={`flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-xl ${config.iconBg} ${config.iconColor}`}>
-          <Icon className="h-4.5 w-4.5 h-[18px] w-[18px]" />
-        </div>
+      </div>
+
+      <div className="h-1 w-full bg-slate-100 rounded-full overflow-hidden">
+        <motion.div
+          initial={{ width: 0 }}
+          animate={{ width: `${config.percent}%` }}
+          transition={{ duration: 1, ease: EASE, delay: 0.5 + index * 0.1 }}
+          className={`h-full ${config.progressBg} opacity-60`}
+        />
       </div>
     </motion.div>
   )
@@ -103,17 +104,16 @@ function CardMetrica({
 function TooltipCustom({ active, payload, label }: any) {
   if (!active || !payload?.length) return null
   return (
-    <div className="rounded-xl bg-white border border-slate-200 shadow-md p-3 min-w-[160px]">
-      <p className="text-xs font-medium text-slate-500 mb-2">{label}</p>
+    <div className="card-premium bg-slate-900/95 backdrop-blur-md border-white/10 p-3 min-w-[180px] shadow-xl">
+      <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-2 border-b border-white/10 pb-1.5">{label}</p>
       {payload.map((p: any) => (
-        <div key={p.dataKey} className="flex items-center justify-between gap-6 text-xs">
-          <span className="text-slate-600">
+        <div key={p.dataKey} className="flex items-center justify-between gap-6 text-xs py-0.5">
+          <span className="text-slate-300 font-medium">
             {p.dataKey === 'receitas' ? 'Receitas' : p.dataKey === 'despesas' ? 'Despesas' : 'Saldo'}
           </span>
           <span
-            className={`font-mono font-semibold ${
-              p.dataKey === 'receitas' ? 'text-green-600' : p.dataKey === 'despesas' ? 'text-red-500' : p.value >= 0 ? 'text-green-600' : 'text-red-500'
-            }`}
+            className={`font-mono font-bold ${p.dataKey === 'receitas' ? 'text-green-400' : p.dataKey === 'despesas' ? 'text-rose-400' : p.value >= 0 ? 'text-green-400' : 'text-rose-400'
+              }`}
           >
             {formatarMoeda(p.value)}
           </span>
@@ -156,183 +156,196 @@ export default function DashboardPage() {
 
   return (
     <AppShell>
-      <div className="p-6 max-w-7xl mx-auto space-y-6">
+      <div className="p-8 max-w-[1400px] mx-auto space-y-10">
 
-        {/* Cabeçalho + navegação de mês */}
-        <motion.div
-          initial={{ opacity: 0, y: 8 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.3, ease: [0.25, 1, 0.5, 1] }}
-          className="flex items-center justify-between"
-        >
-          <div>
-            <h1 className="text-xl font-semibold text-slate-900 tracking-tight">Dashboard</h1>
-            <p className="text-sm text-slate-400 mt-0.5">Visão geral das suas finanças</p>
-          </div>
-          <div className="flex items-center gap-1 rounded-xl border border-slate-200 bg-white shadow-sm px-1 py-1">
+        {/* Header Section */}
+        <section className="flex flex-col md:flex-row md:items-end justify-between gap-6">
+          <motion.div
+            initial={{ opacity: 0, x: -16 }}
+            animate={{ opacity: 1, x: 0 }}
+            transition={{ duration: 0.5, ease: EASE }}
+          >
+            <h1 className="text-3xl font-extrabold text-slate-900 tracking-tight leading-none mb-2">Dashboard</h1>
+            <p className="text-slate-500 font-medium">Visão estratégica da sua inteligência financeira</p>
+          </motion.div>
+
+          <motion.div
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            transition={{ duration: 0.4, ease: EASE, delay: 0.1 }}
+            className="flex items-center bg-white rounded-2xl p-1 shadow-sm border border-slate-200"
+          >
             <button
               onClick={() => navegarMes(-1)}
-              className="rounded-lg p-1.5 text-slate-400 hover:bg-slate-100 hover:text-slate-700 transition-colors"
+              className="p-2 hover:bg-slate-50 rounded-xl text-slate-400 hover:text-slate-600 transition-all cursor-pointer"
             >
-              <ChevronLeft className="h-4 w-4" />
+              <ChevronLeft size={18} strokeWidth={2.5} />
             </button>
-            <span className="min-w-[130px] text-center text-sm font-medium text-slate-700 capitalize px-2">
+            <span className="px-6 py-1.5 text-sm font-bold text-slate-700 min-w-[140px] text-center capitalize">
               {formatarMesAno(mes, ano)}
             </span>
             <button
               onClick={() => navegarMes(1)}
               disabled={mes === mesAtual() && ano === anoAtual()}
-              className="rounded-lg p-1.5 text-slate-400 hover:bg-slate-100 hover:text-slate-700 transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
+              className="p-2 hover:bg-slate-50 rounded-xl text-slate-400 hover:text-slate-600 transition-all disabled:opacity-20 cursor-pointer"
             >
-              <ChevronRight className="h-4 w-4" />
+              <ChevronRight size={18} strokeWidth={2.5} />
             </button>
-          </div>
-        </motion.div>
-
-        {/* Cards de métricas */}
-        {loadingResumo ? (
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-            {[1, 2, 3].map((i) => (
-              <div key={i} className="rounded-xl bg-white border border-slate-200 shadow-sm p-5 h-28 animate-pulse">
-                <div className="h-3 w-20 bg-slate-100 rounded mb-3" />
-                <div className="h-7 w-32 bg-slate-100 rounded" />
-              </div>
-            ))}
-          </div>
-        ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-            <CardMetrica label="Receitas" valor={resumo?.total_receitas ?? 0} tipo="receita" quantidade={resumo?.qtd_receitas} index={0} />
-            <CardMetrica label="Despesas" valor={resumo?.total_despesas ?? 0} tipo="despesa" quantidade={resumo?.qtd_despesas} index={1} />
-            <CardMetrica label="Saldo do mês" valor={resumo?.saldo ?? 0} tipo="saldo" index={2} />
-          </div>
-        )}
-
-        {/* Gráfico de evolução */}
-        {evolucao.length > 0 && (
-          <motion.div
-            initial={{ opacity: 0, y: 12 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.4, ease: [0.25, 1, 0.5, 1], delay: 0.25 }}
-            className="rounded-xl bg-white border border-slate-200 shadow-sm p-5"
-          >
-            <div className="flex items-center justify-between mb-5">
-              <h2 className="text-sm font-semibold text-slate-900">Evolução mensal</h2>
-              <div className="flex items-center gap-4">
-                <div className="flex items-center gap-1.5 text-xs text-slate-500">
-                  <div className="h-2 w-2 rounded-full bg-green-500" />
-                  Receitas
-                </div>
-                <div className="flex items-center gap-1.5 text-xs text-slate-500">
-                  <div className="h-2 w-2 rounded-full bg-red-400" />
-                  Despesas
-                </div>
-              </div>
-            </div>
-            <ResponsiveContainer width="100%" height={200}>
-              <AreaChart data={evolucao} margin={{ top: 4, right: 4, left: 0, bottom: 0 }}>
-                <defs>
-                  <linearGradient id="gradReceitas" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="#16a34a" stopOpacity={0.12} />
-                    <stop offset="95%" stopColor="#16a34a" stopOpacity={0} />
-                  </linearGradient>
-                  <linearGradient id="gradDespesas" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="#ef4444" stopOpacity={0.08} />
-                    <stop offset="95%" stopColor="#ef4444" stopOpacity={0} />
-                  </linearGradient>
-                </defs>
-                <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" vertical={false} />
-                <XAxis dataKey="label" tick={{ fontSize: 11, fill: '#94a3b8' }} axisLine={false} tickLine={false} />
-                <YAxis
-                  tick={{ fontSize: 11, fill: '#94a3b8' }}
-                  axisLine={false}
-                  tickLine={false}
-                  tickFormatter={(v) => `R$${(v / 1000).toFixed(0)}k`}
-                  width={48}
-                />
-                <Tooltip content={<TooltipCustom />} />
-                <Area type="monotone" dataKey="receitas" stroke="#16a34a" strokeWidth={1.5} fill="url(#gradReceitas)" dot={false} activeDot={{ r: 3, strokeWidth: 0 }} />
-                <Area type="monotone" dataKey="despesas" stroke="#ef4444" strokeWidth={1.5} fill="url(#gradDespesas)" dot={false} activeDot={{ r: 3, strokeWidth: 0 }} />
-              </AreaChart>
-            </ResponsiveContainer>
           </motion.div>
-        )}
+        </section>
 
-        {/* Últimos lançamentos */}
-        <motion.div
-          initial={{ opacity: 0, y: 12 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.4, ease: [0.25, 1, 0.5, 1], delay: 0.32 }}
-          className="rounded-xl bg-white border border-slate-200 shadow-sm overflow-hidden"
-        >
-          <div className="flex items-center justify-between px-5 py-4 border-b border-slate-100">
-            <h2 className="text-sm font-semibold text-slate-900">Últimos lançamentos</h2>
-            <a href="/lancamentos" className="text-xs text-green-600 hover:text-green-700 font-medium transition-colors">
-              Ver todos →
-            </a>
-          </div>
-
-          {loadingLancamentos ? (
-            <div className="p-5 space-y-3">
-              {[1, 2, 3].map((i) => (
-                <div key={i} className="flex items-center gap-3 animate-pulse">
-                  <div className="h-8 w-8 rounded-xl bg-slate-100 flex-shrink-0" />
-                  <div className="flex-1 space-y-1.5">
-                    <div className="h-3 w-32 bg-slate-100 rounded" />
-                    <div className="h-2.5 w-20 bg-slate-100 rounded" />
-                  </div>
-                  <div className="h-4 w-20 bg-slate-100 rounded" />
-                </div>
-              ))}
-            </div>
-          ) : ultimos.length === 0 ? (
-            <div className="py-12 text-center">
-              <p className="text-sm text-slate-400">Nenhum lançamento neste mês</p>
-            </div>
+        {/* Metrics Section */}
+        <section className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          {loadingResumo ? (
+            [1, 2, 3].map((i) => (
+              <div key={i} className="card-premium h-32 animate-pulse opacity-50" />
+            ))
           ) : (
-            <ul className="divide-y divide-slate-50">
-              {ultimos.map((l, i) => (
-                <motion.li
-                  key={l.id}
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  transition={{ delay: 0.35 + i * 0.04, duration: 0.25 }}
-                  className="flex items-center gap-3 px-5 py-3 hover:bg-slate-50/60 transition-colors"
-                >
-                  <div
-                    className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-xl text-sm"
-                    style={{ backgroundColor: l.categoria.cor + '18', color: l.categoria.cor }}
-                  >
-                    {l.categoria.icone?.substring(0, 2) ?? '💰'}
-                  </div>
-
-                  <div className="flex-1 min-w-0">
-                    <p className="truncate text-sm font-medium text-slate-900">{l.descricao}</p>
-                    <p className="text-xs text-slate-400">
-                      {l.categoria.nome} · {formatarData(l.data)}
-                      {l.total_parcelas && l.total_parcelas > 1 ? ` · ${l.parcela_atual}/${l.total_parcelas}` : ''}
-                    </p>
-                  </div>
-
-                  <div className="flex items-center gap-1.5 flex-shrink-0">
-                    {l.tipo === 'RECEITA' ? (
-                      <ArrowUpRight className="h-3.5 w-3.5 text-green-500" />
-                    ) : (
-                      <ArrowDownRight className="h-3.5 w-3.5 text-red-400" />
-                    )}
-                    <span className={`font-mono tabular-nums text-sm font-semibold ${l.tipo === 'RECEITA' ? 'text-green-700' : 'text-slate-800'}`}>
-                      {formatarMoeda(l.valor)}
-                    </span>
-                    {!l.efetivado && (
-                      <span className="ml-1 rounded px-1.5 py-0.5 text-xs bg-amber-50 text-amber-600 font-medium">
-                        Pendente
-                      </span>
-                    )}
-                  </div>
-                </motion.li>
-              ))}
-            </ul>
+            <>
+              <CardMetrica label="Entradas" valor={resumo?.total_receitas ?? 0} tipo="receita" index={0} />
+              <CardMetrica label="Saídas" valor={resumo?.total_despesas ?? 0} tipo="despesa" index={1} />
+              <CardMetrica label="Saldo Total" valor={resumo?.saldo ?? 0} tipo="saldo" index={2} />
+            </>
           )}
-        </motion.div>
+        </section>
+
+        {/* Chart Section */}
+        <section className="grid grid-cols-1 xl:grid-cols-3 gap-8">
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.6, ease: EASE, delay: 0.3 }}
+            className="card-premium xl:col-span-2 p-6"
+          >
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8">
+              <h2 className="text-lg font-bold text-slate-800 tracking-tight">Evolução dos Fluxos</h2>
+              <div className="flex gap-4">
+                <div className="flex items-center gap-2">
+                  <span className="w-2.5 h-2.5 rounded-full bg-green-500 shadow-[0_0_8px_rgba(34,197,94,0.3)]" />
+                  <span className="text-[11px] font-bold text-slate-500 uppercase tracking-widest">Receitas</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className="w-2.5 h-2.5 rounded-full bg-rose-500 shadow-[0_0_8px_rgba(244,63,94,0.3)]" />
+                  <span className="text-[11px] font-bold text-slate-500 uppercase tracking-widest">Despesas</span>
+                </div>
+              </div>
+            </div>
+
+            <div className="h-[300px] w-full">
+              <ResponsiveContainer width="100%" height="100%">
+                <AreaChart data={evolucao} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+                  <defs>
+                    <linearGradient id="gradReceitas" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="5%" stopColor="#22c55e" stopOpacity={0.1} />
+                      <stop offset="95%" stopColor="#22c55e" stopOpacity={0} />
+                    </linearGradient>
+                    <linearGradient id="gradDespesas" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="5%" stopColor="#f43f5e" stopOpacity={0.1} />
+                      <stop offset="95%" stopColor="#f43f5e" stopOpacity={0} />
+                    </linearGradient>
+                  </defs>
+                  <CartesianGrid strokeDasharray="6 6" stroke="#f1f5f9" vertical={false} />
+                  <XAxis
+                    dataKey="label"
+                    tick={{ fontSize: 10, fontWeight: 600, fill: '#94a3b8' }}
+                    axisLine={false}
+                    tickLine={false}
+                    dy={10}
+                  />
+                  <YAxis
+                    tick={{ fontSize: 10, fontWeight: 600, fill: '#94a3b8' }}
+                    axisLine={false}
+                    tickLine={false}
+                    tickFormatter={(v) => `R$${(v / 1000).toFixed(0)}k`}
+                  />
+                  <Tooltip content={<TooltipCustom />} cursor={{ stroke: '#f1f5f9', strokeWidth: 2 }} />
+                  <Area
+                    type="monotone"
+                    dataKey="receitas"
+                    stroke="#22c55e"
+                    strokeWidth={3}
+                    fill="url(#gradReceitas)"
+                    activeDot={{ r: 6, stroke: '#fff', strokeWidth: 2 }}
+                  />
+                  <Area
+                    type="monotone"
+                    dataKey="despesas"
+                    stroke="#f43f5e"
+                    strokeWidth={3}
+                    fill="url(#gradDespesas)"
+                    activeDot={{ r: 6, stroke: '#fff', strokeWidth: 2 }}
+                  />
+                </AreaChart>
+              </ResponsiveContainer>
+            </div>
+          </motion.div>
+
+          {/* Side List Section */}
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.6, ease: EASE, delay: 0.4 }}
+            className="card-premium h-full flex flex-col"
+          >
+            <div className="p-6 border-b border-slate-50 flex items-center justify-between">
+              <h2 className="text-lg font-bold text-slate-800 tracking-tight">Atividade Recente</h2>
+              <Link to="/lancamentos" className="text-xs font-bold text-green-600 hover:text-green-700 transition-colors cursor-pointer uppercase tracking-widest">
+                Ver tudo
+              </Link>
+            </div>
+
+            <div className="flex-1 overflow-auto max-h-[400px] xl:max-h-none">
+              {loadingLancamentos ? (
+                <div className="p-6 space-y-4">
+                  {[1, 2, 3, 4].map((i) => (
+                    <div key={i} className="h-12 bg-slate-50 rounded-xl animate-pulse" />
+                  ))}
+                </div>
+              ) : ultimos.length === 0 ? (
+                <div className="p-12 text-center">
+                  <p className="text-sm font-medium text-slate-400">Zero movimentação registrada</p>
+                </div>
+              ) : (
+                <div className="divide-y divide-slate-50/50">
+                  {ultimos.map((l, i) => (
+                    <motion.div
+                      key={l.id}
+                      initial={{ opacity: 0, x: 10 }}
+                      animate={{ opacity: 1, x: 0 }}
+                      transition={{ delay: 0.5 + i * 0.05 }}
+                      className="p-4 flex items-center gap-4 hover:bg-slate-50/50 transition-colors group cursor-pointer"
+                    >
+                      <div
+                        className="h-10 w-10 shrink-0 rounded-2xl flex items-center justify-center text-lg shadow-sm group-hover:scale-110 transition-transform duration-300"
+                        style={{ backgroundColor: l.categoria.cor + '15', color: l.categoria.cor }}
+                      >
+                        {l.categoria.icone?.substring(0, 2) ?? '💰'}
+                      </div>
+
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-bold text-slate-800 truncate leading-tight mb-0.5 group-hover:text-green-600 transition-colors">{l.descricao}</p>
+                        <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">
+                          {l.categoria.nome} · {formatarData(l.data)}
+                        </p>
+                      </div>
+
+                      <div className="flex flex-col items-end shrink-0">
+                        <span className={`text-sm font-extrabold font-mono tabular-nums ${l.tipo === 'RECEITA' ? 'text-green-600' : 'text-slate-900'}`}>
+                          {l.tipo === 'RECEITA' ? '+' : ''}{formatarMoeda(l.valor)}
+                        </span>
+                        {!l.efetivado && (
+                          <span className="text-[9px] font-black text-amber-600 uppercase tracking-tighter bg-amber-50 px-1 rounded-sm mt-0.5">
+                            Pendente
+                          </span>
+                        )}
+                      </div>
+                    </motion.div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </motion.div>
+        </section>
       </div>
     </AppShell>
   )

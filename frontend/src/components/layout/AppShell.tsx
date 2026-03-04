@@ -9,6 +9,8 @@ import {
   Settings,
   LogOut,
   Menu,
+  ChevronRight,
+  ShieldCheck
 } from 'lucide-react'
 import { Logo } from '@/components/ui/Logo'
 import { motion, AnimatePresence } from 'motion/react'
@@ -16,16 +18,18 @@ import { useAuthStore } from '@/store/auth'
 import { api } from '@/services/api'
 
 const NAV_ITEMS = [
-  { to: '/dashboard', icon: LayoutDashboard, label: 'Dashboard' },
-  { to: '/contas', icon: Wallet, label: 'Contas' },
-  { to: '/lancamentos', icon: ArrowLeftRight, label: 'Lançamentos' },
-  { to: '/orcamentos', icon: Target, label: 'Orçamentos' },
-  { to: '/contas-pagar', icon: CalendarClock, label: 'Contas a Pagar' },
+  { to: '/dashboard', icon: LayoutDashboard, label: 'Resumo Geral' },
+  { to: '/contas', icon: Wallet, label: 'Minhas Contas' },
+  { to: '/lancamentos', icon: ArrowLeftRight, label: 'TransaÃ§Ãµes' },
+  { to: '/orcamentos', icon: Target, label: 'Planejamento' },
+  { to: '/contas-pagar', icon: CalendarClock, label: 'Compromissos' },
 ]
 
 interface Props {
   children: React.ReactNode
 }
+
+const EASE = [0.25, 1, 0.5, 1] as [number, number, number, number]
 
 export default function AppShell({ children }: Props) {
   const location = useLocation()
@@ -52,7 +56,7 @@ export default function AppShell({ children }: Props) {
   const primeiroNome = usuario?.nome.split(' ')[0] ?? ''
 
   return (
-    <div className="flex h-screen bg-slate-50 overflow-hidden">
+    <div className="flex h-screen bg-slate-50 overflow-hidden font-sans selection:bg-indigo-100 selection:text-indigo-900">
       {/* Overlay mobile */}
       <AnimatePresence>
         {menuAberto && (
@@ -60,8 +64,7 @@ export default function AppShell({ children }: Props) {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            transition={{ duration: 0.15 }}
-            className="fixed inset-0 z-20 bg-black/40 backdrop-blur-sm lg:hidden"
+            className="fixed inset-0 z-40 bg-slate-950/40 backdrop-blur-md lg:hidden"
             onClick={() => setMenuAberto(false)}
           />
         )}
@@ -70,19 +73,23 @@ export default function AppShell({ children }: Props) {
       {/* Sidebar */}
       <aside
         className={`
-          fixed inset-y-0 left-0 z-30 flex w-60 flex-col bg-slate-900
-          transition-transform duration-200 ease-out
+          fixed inset-y-0 left-0 z-50 flex w-72 flex-col bg-slate-950
+          transition-all duration-500 ease-[0.25,1,0.5,1]
           lg:static lg:translate-x-0
-          ${menuAberto ? 'translate-x-0' : '-translate-x-full'}
+          ${menuAberto ? 'translate-x-0 shadow-2xl' : '-translate-x-full lg:shadow-none'}
         `}
       >
-        {/* Logo */}
-        <div className="flex h-14 items-center px-5 border-b border-slate-800/60">
-          <Logo variant="light" size="sm" />
+        {/* Branding Area */}
+        <div className="flex h-24 items-center px-8">
+          <Logo variant="light" size="md" />
         </div>
 
-        {/* Nav */}
-        <nav className="flex-1 overflow-y-auto px-3 py-4 space-y-0.5">
+        {/* Global Navigation */}
+        <nav className="flex-1 overflow-y-auto px-6 py-4 space-y-2 custom-scrollbar">
+          <div className="mb-6 px-2">
+            <p className="text-[10px] font-black text-slate-500 uppercase tracking-[0.2em]">SessÃ£o Principal</p>
+          </div>
+
           {NAV_ITEMS.map(({ to, icon: Icon, label }) => {
             const ativo = location.pathname === to
             return (
@@ -91,79 +98,109 @@ export default function AppShell({ children }: Props) {
                 to={to}
                 onClick={() => setMenuAberto(false)}
                 className={`
-                  relative flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium
-                  transition-colors duration-150
-                  ${ativo
-                    ? 'bg-slate-800 text-white'
-                    : 'text-slate-500 hover:bg-slate-800/70 hover:text-slate-200'
-                  }
+                  relative flex items-center gap-3 rounded-2xl px-4 py-3 text-sm font-bold
+                  transition-all duration-300 group cursor-pointer
+                  ${ativo ? 'text-white' : 'text-slate-500 hover:text-slate-300'}
                 `}
               >
                 {ativo && (
                   <motion.span
-                    layoutId="sidebar-active"
-                    className="absolute left-0 top-1/2 -translate-y-1/2 w-0.5 h-5 bg-green-500 rounded-r"
-                    transition={{ duration: 0.2, ease: [0.25, 1, 0.5, 1] }}
+                    layoutId="nav-pill"
+                    className="absolute inset-0 bg-white/5 rounded-2xl -z-10 shadow-lg border border-white/5"
+                    transition={{ duration: 0.4, ease: EASE }}
                   />
                 )}
-                <Icon className="h-4 w-4 flex-shrink-0" />
-                {label}
+
+                <div className={`
+                  flex items-center justify-center w-8 h-8 rounded-xl transition-all duration-300
+                  ${ativo ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-600/20' : 'bg-white/5 text-slate-500 group-hover:bg-white/10 group-hover:text-slate-300'}
+                `}>
+                  <Icon size={18} strokeWidth={ativo ? 2.5 : 2} />
+                </div>
+
+                <span className="flex-1 uppercase tracking-tight text-[11px] font-black">{label}</span>
+
+                {ativo && (
+                  <motion.div initial={{ scale: 0 }} animate={{ scale: 1 }} transition={{ delay: 0.2 }}>
+                    <ChevronRight size={14} className="text-white/30" strokeWidth={3} />
+                  </motion.div>
+                )}
               </Link>
             )
           })}
-        </nav>
 
-        {/* Rodapé sidebar */}
-        <div className="border-t border-slate-800/60 p-3 space-y-0.5">
+          <div className="mt-12 mb-6 px-2">
+            <p className="text-[10px] font-black text-slate-500 uppercase tracking-[0.2em]">ConfiguraÃ§Ãµes</p>
+          </div>
+
           <Link
             to="/configuracoes"
             onClick={() => setMenuAberto(false)}
-            className={`flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors duration-150 ${location.pathname === '/configuracoes'
-                ? 'bg-slate-800 text-white'
-                : 'text-slate-500 hover:bg-slate-800/70 hover:text-slate-200'
-              }`}
+            className={`
+              relative flex items-center gap-3 rounded-2xl px-4 py-3 text-sm font-bold transition-all duration-300 group cursor-pointer
+              ${location.pathname === '/configuracoes' ? 'text-white' : 'text-slate-500 hover:text-slate-300'}
+            `}
           >
-            <Settings className="h-4 w-4" />
-            Configurações
+            {location.pathname === '/configuracoes' && (
+              <motion.span layoutId="nav-pill" className="absolute inset-0 bg-white/5 rounded-2xl -z-10 shadow-lg border border-white/5" />
+            )}
+            <div className={`
+              flex items-center justify-center w-8 h-8 rounded-xl transition-all
+              ${location.pathname === '/configuracoes' ? 'bg-slate-700 text-white' : 'bg-white/5 text-slate-500 group-hover:bg-white/10 group-hover:text-slate-300'}
+            `}>
+              <Settings size={18} strokeWidth={2} />
+            </div>
+            <span className="uppercase tracking-tight text-[11px] font-black">PreferÃªncias</span>
           </Link>
+        </nav>
 
-          {/* Avatar + nome */}
-          <div className="flex items-center gap-3 px-3 py-2.5 mt-1 rounded-lg">
-            <div className="flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-full bg-slate-700 text-[11px] font-bold text-slate-300">
-              {iniciais}
+        {/* User Workspace Control */}
+        <div className="p-6 border-t border-white/5 bg-slate-950/40">
+          <div className="bg-white/5 rounded-[1.5rem] p-4 border border-white/5 space-y-4">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-2xl bg-gradient-to-br from-indigo-500 to-indigo-700 flex items-center justify-center text-xs font-black text-white shadow-lg shadow-indigo-600/20 ring-2 ring-slate-900 border border-white/20">
+                {iniciais}
+              </div>
+              <div className="min-w-0 pr-2">
+                <p className="truncate text-[11px] font-black text-white uppercase tracking-tight leading-none mb-1">{primeiroNome}</p>
+                <div className="flex items-center gap-1">
+                  <ShieldCheck size={10} className="text-green-500" />
+                  <span className="text-[9px] text-slate-500 font-bold uppercase tracking-wider">Membro Pro</span>
+                </div>
+              </div>
             </div>
-            <div className="flex-1 min-w-0">
-              <p className="truncate text-sm font-medium text-slate-300">{primeiroNome}</p>
-              <p className="truncate text-xs text-slate-600">{usuario?.email}</p>
-            </div>
+
+            <button
+              onClick={handleLogout}
+              className="flex w-full items-center justify-center gap-2 h-10 rounded-xl bg-rose-500/10 text-rose-500 text-[10px] font-black uppercase tracking-widest hover:bg-rose-500 hover:text-white transition-all cursor-pointer group"
+            >
+              <LogOut size={14} strokeWidth={3} className="group-hover:-translate-x-1 transition-transform" />
+              Finalizar SessÃ£o
+            </button>
           </div>
-
-          <button
-            onClick={handleLogout}
-            className="flex w-full items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium text-slate-500 hover:bg-red-500/10 hover:text-red-400 transition-colors duration-150"
-          >
-            <LogOut className="h-4 w-4" />
-            Sair
-          </button>
         </div>
       </aside>
 
-      {/* Área de conteúdo */}
-      <div className="flex flex-1 flex-col min-w-0 overflow-hidden">
-        {/* Header mobile */}
-        <header className="flex h-14 items-center justify-between border-b border-slate-200 bg-white px-4 lg:hidden">
+      {/* Content Engine */}
+      <div className="flex flex-1 flex-col min-w-0 overflow-hidden relative">
+        {/* Mobile Dynamic Header */}
+        <header className="flex h-16 items-center justify-between border-b border-slate-200 bg-white px-6 lg:hidden shadow-sm relative z-40">
           <button
             onClick={() => setMenuAberto(true)}
-            className="rounded-lg p-2 text-slate-600 hover:bg-slate-100 transition-colors"
+            className="w-10 h-10 rounded-xl flex items-center justify-center text-slate-600 bg-slate-50 hover:bg-slate-100 transition-all cursor-pointer"
           >
-            <Menu className="h-5 w-5" />
+            <Menu size={20} strokeWidth={2.5} />
           </button>
           <Logo variant="dark" size="sm" />
-          <div className="w-9" />
+          <div className="w-10 rounded-xl bg-slate-100 h-10 flex items-center justify-center text-[10px] font-black text-slate-400">
+            {iniciais}
+          </div>
         </header>
 
-        {/* Conteúdo principal */}
-        <main className="flex-1 overflow-y-auto">
+        {/* Global Shimmer Background */}
+        <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_right,rgba(99,102,241,0.03),transparent_40%)] pointer-events-none" />
+
+        <main className="flex-1 overflow-y-auto relative z-10 custom-scrollbar">
           {children}
         </main>
       </div>
