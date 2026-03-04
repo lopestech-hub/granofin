@@ -1,4 +1,4 @@
-import { useState, useRef } from 'react'
+﻿import { useState, useRef } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
@@ -17,13 +17,13 @@ import { categoriasService } from '@/services/categorias'
 import { contasService } from '@/services/contas'
 import { formatarMoeda, formatarData } from '@/utils/formato'
 
-// ─── Schemas ────────────────────────────────────────────────────────────────
+// â”€â”€â”€ Schemas â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 const schemaCriar = z.object({
-  descricao: z.string().min(2, 'Mínimo 2 caracteres'),
+  descricao: z.string().min(2, 'MÃ­nimo 2 caracteres'),
   categoria_id: z.string().min(1, 'Selecione uma categoria'),
   valor: z.coerce.number().positive('Valor deve ser positivo'),
-  data_vencimento: z.string().min(1, 'Data obrigatória'),
+  data_vencimento: z.string().min(1, 'Data obrigatÃ³ria'),
   observacoes: z.string().optional(),
   recorrencia: z.enum(['NENHUMA', 'DIARIA', 'SEMANAL', 'QUINZENAL', 'MENSAL', 'BIMESTRAL', 'TRIMESTRAL', 'SEMESTRAL', 'ANUAL']).default('NENHUMA'),
   total_ocorrencias: z.preprocess((v) => (v === '' ? undefined : v), z.coerce.number().int().min(2).max(120).optional()),
@@ -39,7 +39,7 @@ const schemaBaixar = z.object({
 })
 type FormBaixar = z.infer<typeof schemaBaixar>
 
-// ─── Helpers ─────────────────────────────────────────────────────────────────
+// â”€â”€â”€ Helpers â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 const STATUS_LABELS: Record<ContaPagarStatus, string> = {
   PENDENTE: 'Pendente',
@@ -66,7 +66,7 @@ function isVencida(conta: ContaPagar): boolean {
   return conta.status === 'PENDENTE' && new Date(conta.data_vencimento) < new Date()
 }
 
-// ─── Componente principal ────────────────────────────────────────────────────
+// â”€â”€â”€ Componente principal â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 export default function ContasPagarPage() {
   const qc = useQueryClient()
@@ -79,7 +79,7 @@ export default function ContasPagarPage() {
   const [uploadContaId, setUploadContaId] = useState<string | null>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
 
-  // ── Queries ──
+  // â”€â”€ Queries â”€â”€
   const { data: resumoData } = useQuery({
     queryKey: ['contas-pagar-resumo'],
     queryFn: contasPagarService.resumo,
@@ -106,11 +106,12 @@ export default function ContasPagarPage() {
   const categoriasDespesa = (categoriasData?.categorias ?? []).filter((c) => c.tipo === 'DESPESA')
   const contasFinanceiras = contasData?.contas ?? []
 
-  // ── Mutations ──
+  // â”€â”€ Mutations â”€â”€
   const { mutateAsync: criar, isPending: criando } = useMutation({
     mutationFn: contasPagarService.criar,
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['contas-pagar'] })
+      qc.invalidateQueries({ queryKey: ['contas-pagar-resumo'] })
       toast.success('Conta a pagar criada!')
       setModalCriar(false)
       resetCriar()
@@ -122,6 +123,7 @@ export default function ContasPagarPage() {
     mutationFn: ({ id, data }: { id: string; data: any }) => contasPagarService.editar(id, data),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['contas-pagar'] })
+      qc.invalidateQueries({ queryKey: ['contas-pagar-resumo'] })
       toast.success('Atualizado!')
       setEditando(null)
       resetCriar()
@@ -134,6 +136,7 @@ export default function ContasPagarPage() {
       contasPagarService.baixar(id, data),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['contas-pagar'] })
+      qc.invalidateQueries({ queryKey: ['contas-pagar-resumo'] })
       qc.invalidateQueries({ queryKey: ['lancamentos'] })
       toast.success('Pagamento registrado! Lançamento criado automaticamente.')
       setModalBaixar(null)
@@ -146,6 +149,7 @@ export default function ContasPagarPage() {
     mutationFn: (id: string) => contasPagarService.cancelar(id),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['contas-pagar'] })
+      qc.invalidateQueries({ queryKey: ['contas-pagar-resumo'] })
       toast.success('Conta cancelada')
       setConfirmandoCancelar(null)
     },
@@ -163,7 +167,7 @@ export default function ContasPagarPage() {
     onError: (e: any) => toast.error(e.message ?? 'Erro ao enviar comprovante'),
   })
 
-  // ── Forms ──
+  // â”€â”€ Forms â”€â”€
   const {
     register: registerCriar,
     handleSubmit: handleCriar,
@@ -182,7 +186,7 @@ export default function ContasPagarPage() {
   const tipoCriacao = watchCriar('tipo_criacao')
   watchCriar('recorrencia')
 
-  // ── Handlers ──
+  // â”€â”€ Handlers â”€â”€
   function abrirEditar(conta: ContaPagar) {
     resetCriar({
       descricao: conta.descricao,
@@ -220,17 +224,17 @@ export default function ContasPagarPage() {
 
     if (form.tipo_criacao === 'parcelada') {
       if (!form.total_parcelas) {
-        toast.error('Informe o número de parcelas')
+        toast.error('Informe o nÃºmero de parcelas')
         return
       }
       payload.total_parcelas = form.total_parcelas
     } else if (form.tipo_criacao === 'recorrente') {
       if (!form.recorrencia || form.recorrencia === 'NENHUMA') {
-        toast.error('Selecione uma frequência de recorrência')
+        toast.error('Selecione uma frequÃªncia de recorrÃªncia')
         return
       }
       if (!form.total_ocorrencias) {
-        toast.error('Informe a quantidade de ocorrências')
+        toast.error('Informe a quantidade de ocorrÃªncias')
         return
       }
       payload.recorrencia = form.recorrencia
@@ -253,12 +257,13 @@ export default function ContasPagarPage() {
   }
 
   const inputClass =
-    'w-full h-9 rounded-lg border border-slate-300 px-3 text-sm text-slate-900 placeholder:text-slate-400 focus:border-green-500 focus:ring-2 focus:ring-green-100 outline-none transition-colors'
+    'w-full h-8 rounded-md border border-slate-200 px-2.5 text-sm text-slate-900 placeholder:text-slate-400 focus:border-green-500 focus:ring-1 focus:ring-green-100 outline-none transition-colors bg-white'
+  const labelClass = 'block text-[11px] font-medium text-slate-500 uppercase tracking-wide mb-1'
 
   return (
     <AppShell>
       <div className="p-6 max-w-5xl mx-auto space-y-6">
-        {/* Cabeçalho */}
+        {/* CabeÃ§alho */}
         <div className="flex items-center justify-between">
           <div>
             <h1 className="text-xl font-semibold text-slate-900 tracking-tight">Contas a Pagar</h1>
@@ -292,14 +297,14 @@ export default function ContasPagarPage() {
                 bg: 'bg-red-50',
               },
               {
-                label: 'Pagas no mês',
+                label: 'Pagas no mÃªs',
                 valor: resumo.pagas_mes.valor,
                 qtd: resumo.pagas_mes.quantidade,
                 cor: 'text-green-600',
                 bg: 'bg-green-50',
               },
               {
-                label: 'Total do mês',
+                label: 'Total do mÃªs',
                 valor: resumo.total_mes.valor,
                 qtd: resumo.total_mes.quantidade,
                 cor: 'text-slate-900',
@@ -311,7 +316,7 @@ export default function ContasPagarPage() {
                 <p className={`mt-1.5 font-mono tabular-nums text-xl font-bold ${item.cor}`}>
                   {formatarMoeda(item.valor)}
                 </p>
-                <p className="text-xs text-slate-400 mt-0.5">{item.qtd} conta{item.qtd !== 1 ? 's' : ''}</p>
+                <p className="text-xs text-slate-400 mt-0.5">{item.qtd} {item.qtd !== 1 ? 'itens' : 'item'}</p>
               </div>
             ))}
           </div>
@@ -324,8 +329,8 @@ export default function ContasPagarPage() {
               key={s}
               onClick={() => setFiltroStatus(s)}
               className={`h-8 px-3 rounded-lg text-xs font-medium transition-colors ${filtroStatus === s
-                  ? 'bg-slate-900 text-white'
-                  : 'bg-white border border-slate-200 text-slate-600 hover:border-slate-300'
+                ? 'bg-slate-900 text-white'
+                : 'bg-white border border-slate-200 text-slate-600 hover:border-slate-300'
                 }`}
             >
               {s === 'TODOS' ? 'Todas' : STATUS_LABELS[s]}
@@ -352,7 +357,7 @@ export default function ContasPagarPage() {
           <div className="rounded-xl bg-white border border-slate-200 shadow-sm py-16 text-center">
             <TrendingDown className="mx-auto h-10 w-10 text-slate-200 mb-3" />
             <p className="text-sm font-medium text-slate-500">Nenhuma conta a pagar encontrada</p>
-            <p className="text-xs text-slate-400 mt-1">Crie uma conta para começar</p>
+            <p className="text-xs text-slate-400 mt-1">Crie uma conta para comeÃ§ar</p>
           </div>
         ) : (
           <div className="space-y-2">
@@ -367,15 +372,15 @@ export default function ContasPagarPage() {
                   className={`flex items-center gap-4 rounded-xl bg-white border shadow-sm p-4 hover:border-slate-300 transition-colors ${vencida ? 'border-red-200' : 'border-slate-200'
                     }`}
                 >
-                  {/* Ícone categoria */}
+                  {/* Ãcone categoria */}
                   <div
                     className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-xl text-white text-base"
                     style={{ backgroundColor: conta.categoria?.cor ?? '#64748b' }}
                   >
-                    {conta.categoria?.icone ?? '💸'}
+                    {conta.categoria?.icone ?? 'ðŸ’¸'}
                   </div>
 
-                  {/* Informações */}
+                  {/* InformaÃ§Ãµes */}
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2">
                       <p className="font-medium text-slate-900 truncate">{conta.descricao}</p>
@@ -392,7 +397,7 @@ export default function ContasPagarPage() {
                     </div>
                     <div className="flex items-center gap-3 mt-0.5">
                       <span className="text-xs text-slate-400">{conta.categoria?.nome}</span>
-                      <span className="text-xs text-slate-300">•</span>
+                      <span className="text-xs text-slate-300">â€¢</span>
                       <span className={`flex items-center gap-1 text-xs font-medium ${vencida ? 'text-red-600' : 'text-slate-500'
                         }`}>
                         <CalendarDays className="h-3 w-3" />
@@ -412,7 +417,7 @@ export default function ContasPagarPage() {
                     </span>
                   </div>
 
-                  {/* Ações */}
+                  {/* AÃ§Ãµes */}
                   <div className="flex items-center gap-1 ml-1">
                     {conta.status === 'PENDENTE' && (
                       <button
@@ -471,76 +476,73 @@ export default function ContasPagarPage() {
       {/* Input file oculto para upload de comprovante */}
       <input ref={fileInputRef} type="file" accept=".jpg,.jpeg,.png,.webp,.pdf" className="hidden" onChange={handleFileChange} />
 
-      {/* ── Modal Criar/Editar ── */}
+      {/* â”€â”€ Modal Criar/Editar â”€â”€ */}
       <Modal
         aberto={modalCriar}
         titulo={editando ? 'Editar conta a pagar' : 'Nova conta a pagar'}
         onFechar={fecharModalCriar}
       >
-        <form onSubmit={handleCriar(onSubmitCriar)} className="space-y-4">
+        <form onSubmit={handleCriar(onSubmitCriar)} className="space-y-3">
+
+          {/* DescriÃ§Ã£o */}
           <div>
-            <label className="block text-xs font-medium text-slate-700 mb-1.5">Descrição</label>
+            <label className={labelClass}>DescriÃ§Ã£o</label>
             <input
               {...registerCriar('descricao')}
-              placeholder="Ex: Aluguel, Internet, Conta de luz..."
+              placeholder="Ex: Aluguel, Internet..."
               className={inputClass}
             />
-            {errorsCriar.descricao && <p className="mt-1 text-xs text-red-500">{errorsCriar.descricao.message}</p>}
+            {errorsCriar.descricao && <p className="mt-0.5 text-[11px] text-red-500">{errorsCriar.descricao.message}</p>}
           </div>
 
-          <div className="grid grid-cols-2 gap-3">
+          {/* Valor + Vencimento + Categoria em linha */}
+          <div className="grid grid-cols-2 gap-2">
             <div>
-              <label className="block text-xs font-medium text-slate-700 mb-1.5">Valor</label>
+              <label className={labelClass}>Valor</label>
               <div className="relative">
-                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm text-slate-400">R$</span>
+                <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-xs text-slate-400">R$</span>
                 <input
                   {...registerCriar('valor')}
-                  type="number"
-                  step="0.01"
-                  min="0.01"
-                  placeholder="0,00"
-                  className={`${inputClass} pl-9 font-mono`}
+                  type="number" step="0.01" min="0.01" placeholder="0,00"
+                  className={`${inputClass} pl-8 font-mono`}
                 />
               </div>
-              {errorsCriar.valor && <p className="mt-1 text-xs text-red-500">{errorsCriar.valor.message}</p>}
+              {errorsCriar.valor && <p className="mt-0.5 text-[11px] text-red-500">{errorsCriar.valor.message}</p>}
             </div>
             <div>
-              <label className="block text-xs font-medium text-slate-700 mb-1.5">Vencimento</label>
-              <input
-                {...registerCriar('data_vencimento')}
-                type="date"
-                className={inputClass}
-              />
-              {errorsCriar.data_vencimento && <p className="mt-1 text-xs text-red-500">{errorsCriar.data_vencimento.message}</p>}
+              <label className={labelClass}>Vencimento</label>
+              <input {...registerCriar('data_vencimento')} type="date" className={inputClass} />
+              {errorsCriar.data_vencimento && <p className="mt-0.5 text-[11px] text-red-500">{errorsCriar.data_vencimento.message}</p>}
             </div>
           </div>
 
+          {/* Categoria */}
           <div>
-            <label className="block text-xs font-medium text-slate-700 mb-1.5">Categoria</label>
+            <label className={labelClass}>Categoria</label>
             <select {...registerCriar('categoria_id')} className={inputClass}>
               <option value="">Selecione...</option>
               {categoriasDespesa.map((c) => (
                 <option key={c.id} value={c.id}>{c.icone} {c.nome}</option>
               ))}
             </select>
-            {errorsCriar.categoria_id && <p className="mt-1 text-xs text-red-500">{errorsCriar.categoria_id.message}</p>}
+            {errorsCriar.categoria_id && <p className="mt-0.5 text-[11px] text-red-500">{errorsCriar.categoria_id.message}</p>}
           </div>
 
-          {/* Tipo de criação — apenas para novas contas */}
+          {/* Tipo â€” apenas para novas contas */}
           {!editando && (
             <div>
-              <label className="block text-xs font-medium text-slate-700 mb-1.5">Tipo</label>
-              <div className="grid grid-cols-3 gap-2">
+              <label className={labelClass}>Tipo</label>
+              <div className="flex gap-1.5">
                 {[
-                  { value: 'unica', label: 'Única' },
+                  { value: 'unica', label: 'Ãšnica' },
                   { value: 'parcelada', label: 'Parcelada' },
                   { value: 'recorrente', label: 'Recorrente' },
                 ].map(({ value, label }) => (
                   <label
                     key={value}
-                    className={`flex items-center justify-center rounded-lg border px-3 py-2 text-xs font-medium cursor-pointer transition-colors ${tipoCriacao === value
-                        ? 'border-green-500 bg-green-50 text-green-700'
-                        : 'border-slate-200 text-slate-600 hover:border-slate-300'
+                    className={`flex-1 flex items-center justify-center rounded-md border px-2 py-1.5 text-xs font-medium cursor-pointer transition-colors ${tipoCriacao === value
+                      ? 'border-green-500 bg-green-50 text-green-700'
+                      : 'border-slate-200 text-slate-500 hover:border-slate-300 bg-white'
                       }`}
                   >
                     <input {...registerCriar('tipo_criacao')} type="radio" value={value} className="hidden" />
@@ -551,69 +553,58 @@ export default function ContasPagarPage() {
             </div>
           )}
 
-          {/* Parcelamento */}
+          {/* Parcelamento â€” nÃºmero de parcelas */}
           {!editando && tipoCriacao === 'parcelada' && (
             <div>
-              <label className="block text-xs font-medium text-slate-700 mb-1.5">Número de parcelas</label>
+              <label className={labelClass}>NÃºmero de parcelas</label>
               <input
                 {...registerCriar('total_parcelas')}
-                type="number"
-                min="2"
-                max="120"
-                placeholder="Ex: 12"
+                type="number" min="2" max="120" placeholder="Ex: 12"
                 className={inputClass}
               />
-              {errorsCriar.total_parcelas && <p className="mt-1 text-xs text-red-500">{errorsCriar.total_parcelas.message}</p>}
-              <p className="text-xs text-slate-400 mt-1">O valor será dividido igualmente entre as parcelas</p>
+              {errorsCriar.total_parcelas && <p className="mt-0.5 text-[11px] text-red-500">{errorsCriar.total_parcelas.message}</p>}
             </div>
           )}
 
-          {/* Recorrência */}
+          {/* RecorrÃªncia â€” frequÃªncia + ocorrÃªncias em linha */}
           {!editando && tipoCriacao === 'recorrente' && (
-            <div className="space-y-3">
+            <div className="grid grid-cols-2 gap-2">
               <div>
-                <label className="block text-xs font-medium text-slate-700 mb-1.5">Frequência</label>
-                <div className="relative">
-                  <select {...registerCriar('recorrencia')} className={`${inputClass} pr-8 appearance-none`}>
-                    {[
-                      { value: 'DIARIA', label: 'Diária' },
-                      { value: 'SEMANAL', label: 'Semanal' },
-                      { value: 'QUINZENAL', label: 'Quinzenal' },
-                      { value: 'MENSAL', label: 'Mensal' },
-                      { value: 'BIMESTRAL', label: 'Bimestral' },
-                      { value: 'TRIMESTRAL', label: 'Trimestral' },
-                      { value: 'SEMESTRAL', label: 'Semestral' },
-                      { value: 'ANUAL', label: 'Anual' },
-                    ].map(({ value, label }) => (
-                      <option key={value} value={value}>{label}</option>
-                    ))}
-                  </select>
-                  <ChevronDown className="absolute right-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400 pointer-events-none" />
-                </div>
+                <label className={labelClass}>FrequÃªncia</label>
+                <select {...registerCriar('recorrencia')} className={inputClass}>
+                  {[
+                    { value: 'DIARIA', label: 'DiÃ¡ria' },
+                    { value: 'SEMANAL', label: 'Semanal' },
+                    { value: 'QUINZENAL', label: 'Quinzenal' },
+                    { value: 'MENSAL', label: 'Mensal' },
+                    { value: 'BIMESTRAL', label: 'Bimestral' },
+                    { value: 'TRIMESTRAL', label: 'Trimestral' },
+                    { value: 'SEMESTRAL', label: 'Semestral' },
+                    { value: 'ANUAL', label: 'Anual' },
+                  ].map(({ value, label }) => (
+                    <option key={value} value={value}>{label}</option>
+                  ))}
+                </select>
               </div>
               <div>
-                <label className="block text-xs font-medium text-slate-700 mb-1.5">
-                  Quantidade de ocorrências
-                </label>
+                <label className={labelClass}>OcorrÃªncias</label>
                 <input
                   {...registerCriar('total_ocorrencias')}
-                  type="number"
-                  min="2"
-                  max="120"
-                  placeholder="Ex: 12 meses"
+                  type="number" min="2" max="120" placeholder="Ex: 12"
                   className={inputClass}
                 />
-                {errorsCriar.total_ocorrencias && <p className="mt-1 text-xs text-red-500">{errorsCriar.total_ocorrencias.message}</p>}
+                {errorsCriar.total_ocorrencias && <p className="mt-0.5 text-[11px] text-red-500">{errorsCriar.total_ocorrencias.message}</p>}
               </div>
             </div>
           )}
 
+          {/* ObservaÃ§Ãµes */}
           <div>
-            <label className="block text-xs font-medium text-slate-700 mb-1.5">Observações <span className="text-slate-400 font-normal">(opcional)</span></label>
-            <input {...registerCriar('observacoes')} placeholder="Anotação livre..." className={inputClass} />
+            <label className={labelClass}>ObservaÃ§Ãµes <span className="normal-case text-slate-400 font-normal">(opcional)</span></label>
+            <input {...registerCriar('observacoes')} placeholder="AnotaÃ§Ã£o livre..." className={inputClass} />
           </div>
 
-          <div className="flex justify-end gap-2 pt-2">
+          <div className="flex justify-end gap-2 pt-1">
             <button
               type="button"
               onClick={fecharModalCriar}
@@ -632,7 +623,7 @@ export default function ContasPagarPage() {
         </form>
       </Modal>
 
-      {/* ── Modal Baixar (Registrar Pagamento) ── */}
+      {/* â”€â”€ Modal Baixar (Registrar Pagamento) â”€â”€ */}
       <Modal
         aberto={!!modalBaixar}
         titulo="Registrar pagamento"
@@ -709,7 +700,7 @@ export default function ContasPagarPage() {
         )}
       </Modal>
 
-      {/* ── Confirm Cancelar ── */}
+      {/* â”€â”€ Confirm Cancelar â”€â”€ */}
       <ConfirmDialog
         aberto={!!confirmandoCancelar}
         titulo="Cancelar conta"
@@ -721,3 +712,4 @@ export default function ContasPagarPage() {
     </AppShell>
   )
 }
+

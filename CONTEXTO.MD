@@ -424,7 +424,7 @@ TRIAL_DIAS=14
 - Dev backend: `cd backend && npm run dev`
 - Rodar migration: `cd backend && npx tsx scripts/nome.ts`
 - Build local: `docker build -t granofin .`
-- URL produção: https://applications-granofin.tbs25p.easypanel.host
+- URL produção: <https://applications-granofin.tbs25p.easypanel.host>
 - Prisma Studio: `cd backend && npx prisma studio`
 
 ## 📋 Integrações Externas
@@ -479,23 +479,20 @@ TRIAL_DIAS=14
 - **Etapa 9 (Envs):** 20 variáveis mapeadas no .env.example
 - **Etapa 10 (Roadmap):** 4 fases — Fase 1-3 foco Web, Fase 4 Mobile
 
-## ⚠️ Problemas Conhecidos
-
-_Nenhum até o momento._
+- **Bug crítico resolvido:** rotas SPA do React (`/contas-pagar`, `/contas`, etc.) conflitavam com rotas da API do backend em produção — o servidor retornava JSON bruto ao invés de carregar o React quando o usuário navegava para uma URL diretamente no navegador.
+  - **Causa raiz:** `@fastify/static` + `setNotFoundHandler` redirecionava para `index.html`, mas rotas como `/contas-pagar` existiam no backend E no React Router simultaneamente.
+  - **Solução arquitetural aplicada:** todos os endpoints da API foram movidos para o prefixo `/api` (ex: `/api/auth`, `/api/contas-pagar`). O `BASE_URL` no `api.ts` foi atualizado para `/api` e o proxy do Vite simplificado para um único mapeamento `/api → localhost:3000`.
 
 ## 📅 Última Sessão — O que foi feito e testado
 
-- 2026-03-04: **Redesign visual completo do frontend + deploy**
-  - `frontend/src/index.css` — fundo corrigido para `bg-slate-50`, `font-feature-settings` Inter habilitado
-  - `frontend/src/pages/auth/LoginPage.tsx` — split layout (painel esquerdo `bg-slate-900` + form direito), animações de entrada com `motion/react`, botão com `whileTap`
-  - `frontend/src/pages/auth/CadastroPage.tsx` — mesmo padrão do Login, painel com lista de benefícios do trial
-  - `frontend/src/pages/dashboard/DashboardPage.tsx` — KPI cards com stagger (`fadeUp` variants + `custom` index), gráfico refinado, lista de lançamentos com fade por item, `EASE` tipado como `[number, number, number, number]`
-  - `frontend/src/components/layout/AppShell.tsx` — indicador ativo animado com `layoutId="sidebar-active"`, overlay mobile com `AnimatePresence`, hover mais sutil
-  - `frontend/src/pages/contas/ContasPage.tsx` — animação de entrada `motion.div`
-  - `frontend/src/pages/lancamentos/LancamentosPage.tsx` — animação de entrada `motion.div`
-  - `.design-engineer/system.md` — padrões de animação motion/react documentados
-  - TypeScript: zero erros (`npx tsc --noEmit`)
-  - Deploy: push para GitHub → EasyPanel auto-deploy (commit `cf240a7`)
+- 2026-03-04: **Correção de bug crítico em produção + integração do logo SVG**
+  - `backend/src/server.ts` — todas as rotas da API encapsuladas sob o prefixo `/api`
+  - `frontend/src/services/api.ts` — `BASE_URL` atualizado de `''` para `'/api'`; refresh token também ajustado para `/api/auth/refresh`
+  - `frontend/vite.config.ts` — proxy simplificado para único mapeamento `/api → localhost:3000`
+  - `frontend/src/pages/contas-pagar/ContasPagarPage.tsx` — validação Zod corrigida com `z.preprocess` para campos de parcelas/ocorrências opcionais, payload com `recorrencia: 'NENHUMA'` garantido por padrão
+  - `frontend/src/components/ui/Logo.tsx` — componente SVG customizado com G geométrico + semente brilhante integrado
+  - TypeScript: zero erros (`npx tsc --noEmit`) em backend e frontend
+  - Deploy: commit + push → EasyPanel auto-deploy em andamento
 
 ## ➡️ Próximos Passos
 
@@ -513,3 +510,4 @@ _Nenhum até o momento._
 | 2026-03-03 | Campo `telefone` adicionado à tabela `usuarios` — migration, schema, backend e frontend atualizados  |
 | 2026-03-04 | Módulo Contas a Pagar implementado — tabela, 8 rotas backend, plugin R2, página frontend completa    |
 | 2026-03-04 | Redesign visual completo — split auth, animações motion/react, sidebar refinada, deploy EasyPanel    |
+| 2026-03-04 | **Fix crítico produção:** rotas API movidas para `/api`, fix validação Contas a Pagar, logo SVG      |

@@ -9,7 +9,8 @@ const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
       retry: 1,
-      staleTime: 1000 * 60 * 5, // 5 minutos
+      staleTime: 0, // dados sempre considerados obsoletos — refetch imediato após invalidações
+      refetchOnWindowFocus: false, // não recarrega ao trocar de aba (evita requisições desnecessárias)
     },
   },
 })
