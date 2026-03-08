@@ -5,7 +5,7 @@ import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import {
   Plus, AlertCircle, CheckCircle2, Clock, XCircle,
-  Receipt, Pencil, Trash2, Upload, ExternalLink,
+  Receipt, Pencil, Trash2,
   CalendarDays, TrendingDown, ChevronRight,
   Filter, Search
 } from 'lucide-react'

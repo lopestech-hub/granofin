@@ -6,7 +6,7 @@ import { z } from 'zod'
 import {
   Plus, ChevronLeft, ChevronRight, ArrowUpRight, ArrowDownRight,
   Trash2, Pencil, CheckCircle2, Search, Filter, Calendar,
-  Wallet, Layers, ArrowRight
+  Wallet, Layers, Clock
 } from 'lucide-react'
 import { motion, AnimatePresence } from 'motion/react'
 import toast from 'react-hot-toast'
@@ -375,10 +375,10 @@ export default function LancamentosPage() {
                 type="button"
                 onClick={() => { setValue('tipo', t); setValue('categoria_id', '' as any) }}
                 className={`flex-1 flex items-center justify-center gap-2 h-12 rounded-2xl border-2 font-black text-xs uppercase tracking-widest transition-all cursor-pointer ${tipoForm === t
-                    ? t === 'RECEITA'
-                      ? 'border-green-500 bg-white text-green-600 shadow-md'
-                      : 'border-rose-500 bg-white text-rose-600 shadow-md'
-                    : 'border-slate-50 text-slate-300 hover:border-slate-100'
+                  ? t === 'RECEITA'
+                    ? 'border-green-500 bg-white text-green-600 shadow-md'
+                    : 'border-rose-500 bg-white text-rose-600 shadow-md'
+                  : 'border-slate-50 text-slate-300 hover:border-slate-100'
                   }`}
               >
                 {t === 'RECEITA' ? <ArrowUpRight size={16} /> : <ArrowDownRight size={16} />}

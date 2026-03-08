@@ -34,8 +34,8 @@ function BarraProgresso({ percentual, ultrapassado }: { percentual: number; ultr
         animate={{ width: `${largura}%` }}
         transition={{ duration: 1, ease: EASE }}
         className={`h-full rounded-full transition-colors relative ${ultrapassado ? 'bg-rose-500 shadow-[0_0_12px_rgba(244,63,94,0.4)]' :
-            percentual >= 85 ? 'bg-amber-500 shadow-[0_0_12px_rgba(245,158,11,0.4)]' :
-              'bg-indigo-600 shadow-[0_0_12px_rgba(79,70,229,0.4)]'
+          percentual >= 85 ? 'bg-amber-500 shadow-[0_0_12px_rgba(245,158,11,0.4)]' :
+            'bg-indigo-600 shadow-[0_0_12px_rgba(79,70,229,0.4)]'
           }`}
       />
     </div>
@@ -87,7 +87,7 @@ export default function OrcamentosPage() {
     onError: () => toast.error('Falha ao remover meta'),
   })
 
-  const { register, handleSubmit, reset, formState: { errors } } = useForm<FormData>({ resolver: zodResolver(schema) })
+  const { register, handleSubmit, reset, watch, formState: { errors } } = useForm<FormData>({ resolver: zodResolver(schema) })
 
   function abrirCriar() {
     reset({ categoria_id: '' as any, valor_limite: undefined })

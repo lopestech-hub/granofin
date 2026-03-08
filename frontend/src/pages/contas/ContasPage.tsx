@@ -5,7 +5,7 @@ import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import {
   Plus, Pencil, Trash2, Wallet, CreditCard, PiggyBank, CircleEllipsis,
-  ArrowUpRight, ArrowDownRight, MoreVertical, Landmark
+  ArrowUpRight, ArrowRight, Landmark
 } from 'lucide-react'
 import { motion, AnimatePresence } from 'motion/react'
 import toast from 'react-hot-toast'
@@ -67,7 +67,7 @@ export default function ContasPage() {
     onError: () => toast.error('Não foi possível remover a conta'),
   })
 
-  const { register, handleSubmit, reset, watch, setValue, formState: { errors } } = useForm<FormData>({
+  const { register, handleSubmit, reset, watch, formState: { errors } } = useForm<FormData>({
     resolver: zodResolver(schema)
   })
 
