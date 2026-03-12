@@ -4,19 +4,19 @@ import { z } from 'zod'
 import { Link, useNavigate } from 'react-router-dom'
 import toast from 'react-hot-toast'
 import { motion } from 'motion/react'
-import { ArrowRight, Gift, Layers, ShieldCheck, Heart } from 'lucide-react'
+import { ArrowRight, Gift, Layers, TrendingUp, Heart } from 'lucide-react'
 import { Logo } from '@/components/ui/Logo'
 import { api, ApiError } from '@/services/api'
 import { useAuthStore } from '@/store/auth'
 
 const schema = z.object({
   nome: z.string().min(2, 'Nome deve ter ao menos 2 caracteres'),
-  email: z.string().email('E-mail invÃ¡lido'),
+  email: z.string().email('E-mail inválido'),
   telefone: z
     .string()
-    .min(10, 'Telefone invÃ¡lido â€” inclua o DDD')
-    .max(20, 'Telefone invÃ¡lido')
-    .regex(/^\+?[\d\s\(\)\-]+$/, 'Use apenas nÃºmeros, espaÃ§os, +, ( e )'),
+    .min(10, 'Telefone inválido — inclua o DDD')
+    .max(20, 'Telefone inválido')
+    .regex(/^\+?[\d\s\(\)\-]+$/, 'Use apenas números, espaços, +, ( e )'),
   senha: z.string().min(8, 'Senha deve ter ao menos 8 caracteres'),
 })
 
@@ -41,7 +41,7 @@ export default function CadastroPage() {
         usuario: any
       }>('/auth/cadastro', data)
       login(res.usuario, res.access_token, res.refresh_token)
-      toast.success('Conta validada! BÃ´nus de 14 dias ativado.')
+      toast.success('Conta validada! Bônus de 14 dias ativado.')
       navigate('/dashboard')
     } catch (err) {
       const msg = err instanceof ApiError ? err.message : 'Erro ao criar conta'
@@ -68,22 +68,22 @@ export default function CadastroPage() {
           >
             <span className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-green-500/10 text-green-400 text-[10px] font-black uppercase tracking-[0.2em] mb-6">
               <Gift size={14} className="fill-current" />
-              Oferta exclusiva de lanÃ§amento
+              Oferta exclusiva de lançamento
             </span>
             <h2 className="text-5xl font-black text-white leading-[1.1] tracking-tighter mb-6">
               Organize sua vida <br />
               em <span className="text-indigo-400">segundos</span>.
             </h2>
             <p className="text-slate-400 text-lg font-medium leading-relaxed">
-              Diga adeus Ã s planilhas complexas. Experimente a simplicidade do Granofin gratuitamente por 14 dias.
+              Diga adeus às planilhas complexas. Experimente a simplicidade do Granofin gratuitamente por 14 dias.
             </p>
           </motion.div>
 
           <div className="space-y-4">
             {[
-              { icon: Layers, text: 'GestÃ£o de contas ilimitadas' },
-              { icon: ShieldCheck, text: 'Privacidade de dados absoluto' },
-              { icon: Heart, text: 'Suporte prioritÃ¡rio 24/7' }
+              { icon: Layers, text: 'Gestão de contas ilimitadas' },
+              { icon: TrendingUp, text: 'Relatórios inteligentes de gastos' },
+              { icon: Heart, text: 'Suporte prioritário 24/7' }
             ].map((item, i) => (
               <motion.div
                 key={item.text}
@@ -103,7 +103,7 @@ export default function CadastroPage() {
 
         <div className="relative z-10 flex items-center justify-between text-[10px] font-bold uppercase tracking-widest text-slate-600">
           <span>Membro da rede Granofin</span>
-          <span>VersÃ£o 2.0 Enterprise</span>
+          <span>Versão 2.0 Enterprise</span>
         </div>
 
         {/* Abstract Background Elements */}
@@ -132,12 +132,12 @@ export default function CadastroPage() {
               <div className="space-y-4">
                 <div>
                   <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 block">Nome Completo</label>
-                  <input {...register('nome')} type="text" placeholder="Ex: JoÃ£o Silva" className="premium-input bg-white h-12" />
+                  <input {...register('nome')} type="text" placeholder="Ex: João Silva" className="premium-input bg-white h-12" />
                   {errors.nome && <p className="mt-2 text-[10px] text-rose-500 font-bold ml-1">{errors.nome.message}</p>}
                 </div>
 
                 <div>
-                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 block">EndereÃ§o de Email</label>
+                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 block">Endereço de Email</label>
                   <input {...register('email')} type="email" placeholder="seu@email.com" className="premium-input bg-white h-12" />
                   {errors.email && <p className="mt-2 text-[10px] text-rose-500 font-bold ml-1">{errors.email.message}</p>}
                 </div>
@@ -149,7 +149,7 @@ export default function CadastroPage() {
                     {errors.telefone && <p className="mt-2 text-[10px] text-rose-500 font-bold ml-1">{errors.telefone.message}</p>}
                   </div>
                   <div>
-                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 block">Chave de SeguranÃ§a</label>
+                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 block">Chave de Segurança</label>
                     <input {...register('senha')} type="password" placeholder="8+ caracteres" className="premium-input bg-white h-12" />
                     {errors.senha && <p className="mt-2 text-[10px] text-rose-500 font-bold ml-1">{errors.senha.message}</p>}
                   </div>
@@ -166,7 +166,7 @@ export default function CadastroPage() {
                 >
                   {isSubmitting ? 'Validando Dados...' : (
                     <>
-                      ATIVAR TRIAL GRÃTIS
+                      ATIVAR TRIAL GRÁTIS
                       <ArrowRight size={18} strokeWidth={3} />
                     </>
                   )}

@@ -10,8 +10,8 @@ import { api, ApiError } from '@/services/api'
 import { useAuthStore } from '@/store/auth'
 
 const schema = z.object({
-  email: z.string().email('E-mail invÃ¡lido'),
-  senha: z.string().min(1, 'Senha obrigatÃ³ria'),
+  email: z.string().email('E-mail inválido'),
+  senha: z.string().min(1, 'Senha obrigatória'),
 })
 
 type FormData = z.infer<typeof schema>
@@ -74,8 +74,8 @@ export default function LoginPage() {
 
           <div className="grid grid-cols-2 gap-8">
             {[
-              { icon: ShieldCheck, title: 'SeguranÃ§a Atômica', desc: 'Dados criptografados de ponta a ponta.' },
-              { icon: TrendingUp, title: 'Growth Analytics', desc: 'PrevisÃµes baseadas em comportamento.' }
+              { icon: ShieldCheck, title: 'Segurança Atômica', desc: 'Dados criptografados de ponta a ponta.' },
+              { icon: TrendingUp, title: 'Growth Analytics', desc: 'Previsões baseadas em comportamento.' }
             ].map((f, i) => (
               <motion.div
                 key={f.title}
@@ -122,7 +122,7 @@ export default function LoginPage() {
 
             <header>
               <h1 className="text-3xl font-black text-slate-900 tracking-tighter uppercase mb-2">Login de Acesso</h1>
-              <p className="text-slate-500 font-medium italic text-sm">Insira suas credenciais para gerenciar suas finanÃ§as.</p>
+              <p className="text-slate-500 font-medium italic text-sm">Insira suas credenciais para gerenciar suas finanças.</p>
             </header>
 
             <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">

@@ -19,12 +19,12 @@ import { categoriasService } from '@/services/categorias'
 import { formatarMoeda, formatarData, formatarMesAno, mesAtual, anoAtual } from '@/utils/formato'
 
 const schema = z.object({
-  descricao: z.string().min(1, 'DescriÃ§Ã£o obrigatÃ³ria'),
+  descricao: z.string().min(1, 'Descrição obrigatória'),
   valor: z.coerce.number().positive('Valor deve ser positivo'),
   tipo: z.enum(['RECEITA', 'DESPESA']),
   conta_id: z.string().uuid('Selecione uma conta'),
   categoria_id: z.string().uuid('Selecione uma categoria'),
-  data: z.string().min(1, 'Data obrigatÃ³ria'),
+  data: z.string().min(1, 'Data obrigatória'),
   efetivado: z.boolean().default(true),
   observacoes: z.string().optional(),
   total_parcelas: z.coerce.number().min(1).optional(),
@@ -152,8 +152,8 @@ export default function LancamentosPage() {
         {/* Header */}
         <header className="flex flex-col md:flex-row md:items-end justify-between gap-6">
           <motion.div initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} transition={{ duration: 0.5, ease: EASE }}>
-            <h1 className="text-3xl font-extrabold text-slate-900 tracking-tight leading-none mb-2">LanÃ§amentos</h1>
-            <p className="text-slate-500 font-medium italic">HistÃ³rico detalhado da sua vida financeira</p>
+            <h1 className="text-3xl font-extrabold text-slate-900 tracking-tight leading-none mb-2">Lançamentos</h1>
+            <p className="text-slate-500 font-medium italic">Histórico detalhado da sua vida financeira</p>
           </motion.div>
 
           <div className="flex items-center gap-3">
@@ -214,7 +214,7 @@ export default function LancamentosPage() {
               <Wallet size={24} strokeWidth={2.5} />
             </div>
             <div>
-              <p className="text-[10px] font-bold text-indigo-400 uppercase tracking-widest">Saldo do PerÃ­odo</p>
+              <p className="text-[10px] font-bold text-indigo-400 uppercase tracking-widest">Saldo do Período</p>
               <p className={`text-2xl font-black font-mono tracking-tighter ${totalReceitas - totalDespesas >= 0 ? 'text-indigo-600' : 'text-rose-600'}`}>
                 {formatarMoeda(totalReceitas - totalDespesas)}
               </p>
@@ -242,7 +242,7 @@ export default function LancamentosPage() {
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={14} />
             <input
               type="text"
-              placeholder="Pesquisar por descriÃ§Ã£o, categoria ou conta..."
+              placeholder="Pesquisar por descrição, categoria ou conta..."
               className="w-full pl-9 pr-4 py-2 bg-slate-100/50 border-none rounded-xl text-[13px] font-medium placeholder:text-slate-400 focus:ring-2 focus:ring-indigo-500/20 transition-all"
             />
           </div>
@@ -427,7 +427,7 @@ export default function LancamentosPage() {
               <div className="col-span-full">
                 <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 block">Parcelamento (Opcional)</label>
                 <div className="relative">
-                  <input {...register('total_parcelas')} type="number" min="1" max="60" className="premium-input pl-4" placeholder="NÃºmero de parcelas (ex: 12)" />
+                  <input {...register('total_parcelas')} type="number" min="1" max="60" className="premium-input pl-4" placeholder="Número de parcelas (ex: 12)" />
                   <Layers size={16} className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-300" />
                 </div>
               </div>
@@ -439,8 +439,8 @@ export default function LancamentosPage() {
                   {watch('efetivado') ? <CheckCircle2 size={20} strokeWidth={2.5} /> : <Clock size={20} strokeWidth={2.5} />}
                 </div>
                 <div>
-                  <p className="text-[11px] font-black text-slate-900 uppercase">Status de EfetivaÃ§Ã£o</p>
-                  <p className="text-[10px] text-slate-400 font-bold uppercase">{watch('efetivado') ? 'LanÃ§amento Liquidado' : 'Agendado para o futuro'}</p>
+                  <p className="text-[11px] font-black text-slate-900 uppercase">Status de Efetivação</p>
+                  <p className="text-[10px] text-slate-400 font-bold uppercase">{watch('efetivado') ? 'Lançamento Liquidado' : 'Agendado para o futuro'}</p>
                 </div>
               </div>
               <label className="relative flex items-center cursor-pointer">
@@ -450,7 +450,7 @@ export default function LancamentosPage() {
             </div>
 
             <div className="col-span-full">
-              <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 block">AnotaÃ§Ãµes</label>
+              <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 block">Anotações</label>
               <textarea {...register('observacoes')} rows={2} className="premium-input py-3 resize-none" placeholder="Detalhes adicionais..." />
             </div>
           </div>
@@ -458,7 +458,7 @@ export default function LancamentosPage() {
           <div className="flex justify-end gap-3 pt-4 border-t border-slate-50">
             <button type="button" onClick={fecharModal} className="h-12 px-8 rounded-2xl text-slate-500 font-bold hover:bg-slate-50 cursor-pointer">Descartar</button>
             <button type="submit" disabled={criando || atualizando} className="h-12 px-10 rounded-2xl bg-indigo-600 text-white font-black shadow-xl shadow-indigo-600/20 hover:scale-[1.02] transition-all cursor-pointer disabled:opacity-50">
-              {criando || atualizando ? 'Processando...' : editando ? 'Salvar AlteraÃ§Ãµes' : 'Efetuar LanÃ§amento'}
+              {criando || atualizando ? 'Processando...' : editando ? 'Salvar Alterações' : 'Efetuar Lançamento'}
             </button>
           </div>
         </form>
@@ -466,8 +466,8 @@ export default function LancamentosPage() {
 
       <ConfirmDialog
         aberto={!!confirmando}
-        titulo="Remover MovimentaÃ§Ã£o?"
-        mensagem={`VocÃª está prestes a remover o registro "${confirmando?.descricao}". Esta operaÃ§Ã£o alterarÃ¡ seus saldos e não pode ser revertida.`}
+        titulo="Remover Movimentação?"
+        mensagem={`Você está prestes a remover o registro "${confirmando?.descricao}". Esta operação alterará seus saldos e não pode ser revertida.`}
         onConfirmar={() => confirmando && deletar(confirmando.id)}
         onCancelar={() => setConfirmando(null)}
         carregando={deletando}

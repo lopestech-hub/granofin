@@ -8,7 +8,7 @@ import { Mail, ArrowLeft, Send } from 'lucide-react'
 import { api, ApiError } from '@/services/api'
 import { Logo } from '@/components/ui/Logo'
 
-const schema = z.object({ email: z.string().email('E-mail invÃ¡lido') })
+const schema = z.object({ email: z.string().email('E-mail inválido') })
 type FormData = z.infer<typeof schema>
 
 const EASE = [0.25, 1, 0.5, 1] as [number, number, number, number]
@@ -41,7 +41,7 @@ export default function EsqueciSenhaPage() {
           </div>
           <h2 className="text-3xl font-black text-slate-900 tracking-tighter uppercase mb-3">Verifique seu Portal</h2>
           <p className="text-slate-500 font-medium italic mb-10">
-            Se este e-mail existe em nossa rede, você receberá o protocolo de recuperaÃ§Ã£o em instantes.
+            Se este e-mail existe em nossa rede, você receberá o protocolo de recuperação em instantes.
           </p>
           <Link to="/auth/login" className="flex items-center justify-center gap-2 text-xs font-black uppercase text-indigo-600 hover:text-indigo-800 transition-colors">
             <ArrowLeft size={16} />

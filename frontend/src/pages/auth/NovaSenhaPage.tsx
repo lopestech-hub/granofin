@@ -26,13 +26,13 @@ export default function NovaSenhaPage() {
 
   const onSubmit = async (data: FormData) => {
     if (!token) {
-      toast.error('Token invÃ¡lido ou expirado. Solicite um novo reset.')
+      toast.error('Token inválido ou expirado. Solicite um novo reset.')
       return
     }
 
     try {
       await api.post('/auth/resetar-senha', { token, nova_senha: data.nova_senha })
-      toast.success('Senha redefinida com sucesso! ProteÃ§Ã£o atualizada.')
+      toast.success('Senha redefinida com sucesso! Proteção atualizada.')
       navigate('/auth/login')
     } catch (err) {
       const msg = err instanceof ApiError ? err.message : 'Erro ao redefinir senha'
@@ -57,7 +57,7 @@ export default function NovaSenhaPage() {
             <div className="w-12 h-12 rounded-2xl bg-indigo-50 text-indigo-600 flex items-center justify-center mb-6 shadow-sm">
               <KeyRound size={24} strokeWidth={2.5} />
             </div>
-            <h1 className="text-2xl font-black text-slate-900 tracking-tighter uppercase mb-2">RedefiniÃ§Ã£o de Chave</h1>
+            <h1 className="text-2xl font-black text-slate-900 tracking-tighter uppercase mb-2">Redefinição de Chave</h1>
             <p className="text-sm text-slate-500 font-medium italic">Escolha uma nova senha forte para proteger sua conta Granofin.</p>
           </header>
 
