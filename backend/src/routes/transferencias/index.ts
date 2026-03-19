@@ -39,10 +39,10 @@ export const transferenciasRoutes: FastifyPluginAsync = async (app) => {
     const transferencia_id = crypto.randomUUID()
 
     try {
-      // Usamos transação para garantir que ambos os lados sejam criados
-      await app.prisma.$transaction([
-        // Lado da Saída (Despesa na Origem)
-        app.prisma.lancamentos.create({
+      // Usamos transação para garantir integridade atômica
+      await app.prisma.$transaction(async (tx) => {
+        // 1. Cria Lado da Saída (Despesa na Origem)
+        await tx.lancamentos.create({
           data: {
             id: crypto.randomUUID(),
             usuario_id,
@@ -56,9 +56,16 @@ export const transferenciasRoutes: FastifyPluginAsync = async (app) => {
             observacoes,
             transferencia_id,
           }
-        }),
-        // Lado da Entrada (Receita no Destino)
-        app.prisma.lancamentos.create({
+        })
+
+        // 2. Atualiza saldo da Origem (subtrai)
+        await tx.contas.update({
+          where: { id: conta_origem_id },
+          data: { saldo_atual: { decrement: valor } }
+        })
+
+        // 3. Cria Lado da Entrada (Receita no Destino)
+        await tx.lancamentos.create({
           data: {
             id: crypto.randomUUID(),
             usuario_id,
@@ -73,7 +80,13 @@ export const transferenciasRoutes: FastifyPluginAsync = async (app) => {
             transferencia_id,
           }
         })
-      ])
+
+        // 4. Atualiza saldo do Destino (soma)
+        await tx.contas.update({
+          where: { id: conta_destino_id },
+          data: { saldo_atual: { increment: valor } }
+        })
+      })
 
       return reply.status(201).send({ success: true, transferencia_id })
     } catch (e: any) {

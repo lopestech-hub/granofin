@@ -16,29 +16,9 @@ export const contasRoutes: FastifyPluginAsync = async (app) => {
   app.get('/', auth, async (request, reply) => {
     const { id: usuario_id } = request.user as any
 
-    const contasExistentes = await app.prisma.contas.findMany({
+    const contas = await app.prisma.contas.findMany({
       where: { usuario_id, deletado_em: null },
       orderBy: { criado_em: 'asc' },
-    })
-
-    // Busca sumário de lançamentos efetivados para calcular o saldo real
-    const movimentacoes = await app.prisma.lancamentos.groupBy({
-      by: ['conta_id', 'tipo'],
-      _sum: { valor: true },
-      where: {
-        usuario_id,
-        efetivado: true,
-      }
-    })
-
-    const contas = contasExistentes.map(c => {
-      const receitas = movimentacoes.find(m => m.conta_id === c.id && m.tipo === 'RECEITA')?._sum.valor || 0
-      const despesas = movimentacoes.find(m => m.conta_id === c.id && m.tipo === 'DESPESA')?._sum.valor || 0
-      
-      return {
-        ...c,
-        saldo_atual: Number(c.saldo_inicial) + Number(receitas) - Number(despesas)
-      }
     })
 
     return reply.send({ success: true, contas })

@@ -286,9 +286,8 @@ export const contasPagarRoutes: FastifyPluginAsync = async (app) => {
       return reply.status(400).send({ success: false, error: 'Não é possível excluir uma conta já paga' })
     }
 
-    await app.prisma.contas_pagar.update({
+    await app.prisma.contas_pagar.delete({
       where: { id },
-      data: { deletado_em: new Date(), status: 'CANCELADO' },
     })
 
     return reply.send({ success: true })
@@ -336,30 +335,41 @@ export const contasPagarRoutes: FastifyPluginAsync = async (app) => {
       ? parseISO(data_pagamento.includes('T') ? data_pagamento : `${data_pagamento}T12:00:00`)
       : new Date()
 
-    // Cria o lançamento automaticamente
-    const lancamento = await app.prisma.lancamentos.create({
-      data: {
-        usuario_id,
-        conta_id,
-        categoria_id: existente.categoria_id,
-        descricao: existente.descricao,
-        valor: valor_pago ?? existente.valor,
-        tipo: 'DESPESA',
-        data: dataPagamento,
-        efetivado: true,
-        observacoes: existente.observacoes ?? undefined,
-      },
-    })
+    // Realiza a baixa e atualização de saldo em transação
+    const { conta: contaAtualizada, lancamento } = await app.prisma.$transaction(async (tx) => {
+      // 1. Cria o lançamento automaticamente
+      const l = await tx.lancamentos.create({
+        data: {
+          usuario_id,
+          conta_id,
+          categoria_id: existente.categoria_id,
+          descricao: existente.descricao,
+          valor: valor_pago ?? existente.valor,
+          tipo: 'DESPESA',
+          data: dataPagamento,
+          efetivado: true,
+          observacoes: existente.observacoes ?? undefined,
+        },
+      })
 
-    // Atualiza a conta a pagar como PAGA
-    const contaAtualizada = await app.prisma.contas_pagar.update({
-      where: { id },
-      data: {
-        status: 'PAGO',
-        conta_id,
-        data_pagamento: dataPagamento,
-        lancamento_id: lancamento.id,
-      },
+      // 2. Atualiza saldo da conta financeira (subtrai)
+      await tx.contas.update({
+        where: { id: conta_id },
+        data: { saldo_atual: { decrement: valor_pago ?? existente.valor } }
+      })
+
+      // 3. Atualiza a conta a pagar como PAGA
+      const cp = await tx.contas_pagar.update({
+        where: { id },
+        data: {
+          status: 'PAGO',
+          conta_id,
+          data_pagamento: dataPagamento,
+          lancamento_id: l.id,
+        },
+      })
+
+      return { conta: cp, lancamento: l }
     })
 
     return reply.send({ success: true, conta: contaAtualizada, lancamento })

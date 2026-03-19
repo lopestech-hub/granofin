@@ -99,7 +99,19 @@ export const lancamentosRoutes: FastifyPluginAsync = async (app) => {
         }
       })
 
-      await app.prisma.lancamentos.createMany({ data: parcelas })
+      const resultado = await app.prisma.$transaction(async (tx) => {
+        await tx.lancamentos.createMany({ data: parcelas })
+
+        // Se a primeira parcela for efetivada (padrão do schema)
+        if (dados.efetivado !== false) {
+           const fator = dados.tipo === 'RECEITA' ? 1 : -1
+           await tx.contas.update({
+             where: { id: dados.conta_id },
+             data: { saldo_atual: { increment: Number(valor) * fator } }
+           })
+        }
+        return true
+      })
 
       return reply.status(201).send({
         success: true,
@@ -108,13 +120,28 @@ export const lancamentosRoutes: FastifyPluginAsync = async (app) => {
       })
     }
 
-    // Lançamento único
-    const lancamento = await app.prisma.lancamentos.create({
-      data: { ...dados, usuario_id, valor, data: new Date(data) },
-      include: {
-        categoria: { select: { id: true, nome: true, cor: true, icone: true } },
-        conta: { select: { id: true, nome: true } },
-      },
+    // Lançamento único - Usando transação para garantir integridade
+    const lancamento = await app.prisma.$transaction(async (tx) => {
+      const l = await tx.lancamentos.create({
+        data: { ...dados, usuario_id, valor, data: new Date(data) },
+        include: {
+          categoria: { select: { id: true, nome: true, cor: true, icone: true } },
+          conta: { select: { id: true, nome: true } },
+        },
+      })
+
+      // Atualiza o saldo_atual da conta apenas se estiver efetivado
+      if (l.efetivado) {
+        const fator = l.tipo === 'RECEITA' ? 1 : -1
+        await tx.contas.update({
+          where: { id: dados.conta_id },
+          data: {
+            saldo_atual: { increment: Number(l.valor) * fator }
+          }
+        })
+      }
+
+      return l
     })
 
     return reply.status(201).send({ success: true, lancamento })
@@ -130,24 +157,47 @@ export const lancamentosRoutes: FastifyPluginAsync = async (app) => {
       return reply.status(400).send({ success: false, error: resultado.error.errors[0].message })
     }
 
-    const existente = await app.prisma.lancamentos.findFirst({
-      where: { id, usuario_id, deletado_em: null },
-    })
-    if (!existente) {
-      return reply.status(404).send({ success: false, error: 'Lançamento não encontrado' })
+    try {
+      const lancamento = await app.prisma.$transaction(async (tx) => {
+        const antigo = await tx.lancamentos.findFirst({ where: { id, usuario_id, deletado_em: null } })
+        if (!antigo) throw new Error('NOT_FOUND')
+
+        const { data, ...resto } = resultado.data
+        const novo = await tx.lancamentos.update({
+          where: { id },
+          data: { ...resto, ...(data ? { data: new Date(data) } : {}) },
+        })
+
+        if (antigo.efetivado) {
+          const fatorAntigo = antigo.tipo === 'RECEITA' ? -1 : 1
+          await tx.contas.update({
+            where: { id: antigo.conta_id },
+            data: { saldo_atual: { increment: Number(antigo.valor) * fatorAntigo } }
+          })
+        }
+
+        if (novo.efetivado) {
+          const fatorNovo = novo.tipo === 'RECEITA' ? 1 : -1
+          await tx.contas.update({
+            where: { id: novo.conta_id },
+            data: { saldo_atual: { increment: Number(novo.valor) * fatorNovo } }
+          })
+        }
+
+        return tx.lancamentos.findUnique({
+          where: { id: novo.id },
+          include: {
+            categoria: { select: { id: true, nome: true, cor: true, icone: true } },
+            conta: { select: { id: true, nome: true } },
+          }
+        })
+      })
+
+      return reply.send({ success: true, lancamento })
+    } catch (e: any) {
+      if (e.message === 'NOT_FOUND') return reply.status(404).send({ success: false, error: 'Lançamento não encontrado' })
+      throw e
     }
-
-    const { data, ...resto } = resultado.data
-    const lancamento = await app.prisma.lancamentos.update({
-      where: { id },
-      data: { ...resto, ...(data ? { data: new Date(data) } : {}) },
-      include: {
-        categoria: { select: { id: true, nome: true, cor: true, icone: true } },
-        conta: { select: { id: true, nome: true } },
-      },
-    })
-
-    return reply.send({ success: true, lancamento })
   })
 
   // DELETE /lancamentos/:id — soft delete apenas desta parcela
@@ -162,9 +212,22 @@ export const lancamentosRoutes: FastifyPluginAsync = async (app) => {
       return reply.status(404).send({ success: false, error: 'Lançamento não encontrado' })
     }
 
-    await app.prisma.lancamentos.update({
-      where: { id },
-      data: { deletado_em: new Date() },
+    await app.prisma.$transaction(async (tx) => {
+      // 1. Busca o lançamento antes de deletar para saber o valor e tipo
+      const l = await tx.lancamentos.findFirst({ where: { id, usuario_id } })
+      if (!l) return
+
+      // 2. Se estava efetivado, reverte o impacto no saldo
+      if (l.efetivado) {
+        const fator = l.tipo === 'RECEITA' ? -1 : 1 // Inverte: se era receita (+), agora subtrai (-)
+        await tx.contas.update({
+          where: { id: l.conta_id },
+          data: { saldo_atual: { increment: Number(l.valor) * fator } }
+        })
+      }
+
+      // 3. Deleta de vez (Hard Delete)
+      await tx.lancamentos.delete({ where: { id } })
     })
 
     return reply.send({ success: true })
@@ -182,9 +245,21 @@ export const lancamentosRoutes: FastifyPluginAsync = async (app) => {
       return reply.status(404).send({ success: false, error: 'Lançamento não encontrado' })
     }
 
-    const lancamento = await app.prisma.lancamentos.update({
-      where: { id },
-      data: { efetivado: true },
+    const lancamento = await app.prisma.$transaction(async (tx) => {
+      const l = await tx.lancamentos.update({
+        where: { id },
+        data: { efetivado: true },
+        include: { conta: true }
+      })
+
+      // Soma/Subtrai no saldo da conta agora que foi efetivado
+      const fator = l.tipo === 'RECEITA' ? 1 : -1
+      await tx.contas.update({
+        where: { id: l.conta_id },
+        data: { saldo_atual: { increment: Number(l.valor) * fator } }
+      })
+
+      return l
     })
 
     return reply.send({ success: true, lancamento })
