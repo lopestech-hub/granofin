@@ -77,9 +77,16 @@ export const contasRoutes: FastifyPluginAsync = async (app) => {
       return reply.status(404).send({ success: false, error: 'Conta não encontrada' })
     }
 
-    await app.prisma.contas.update({
-      where: { id },
-      data: { deletado_em: new Date() },
+    // Hard Delete: Deletar a conta e tudo o que estiver ligado a ela
+    await app.prisma.$transaction(async (tx) => {
+      // 1. Deletar lançamentos ligados a esta conta
+      await tx.lancamentos.deleteMany({ where: { conta_id: id } })
+
+      // 2. Deletar contas a pagar ligadas a esta conta
+      await tx.contas_pagar.deleteMany({ where: { conta_id: id } })
+
+      // 3. Finalmente deletar a conta
+      await tx.contas.delete({ where: { id } })
     })
 
     return reply.send({ success: true })
