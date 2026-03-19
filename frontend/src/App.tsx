@@ -13,6 +13,7 @@ import DashboardPage from '@/pages/dashboard/DashboardPage'
 import ContasPage from '@/pages/contas/ContasPage'
 import LancamentosPage from '@/pages/lancamentos/LancamentosPage'
 import OrcamentosPage from '@/pages/orcamentos/OrcamentosPage'
+import CategoriasPage from '@/pages/categorias/CategoriasPage'
 import ConfiguracoesPage from '@/pages/configuracoes/ConfiguracoesPage'
 import ContasPagarPage from '@/pages/contas-pagar/ContasPagarPage'
 
@@ -38,6 +39,7 @@ export default function App() {
         <Route path="/contas" element={<RotaPrivada><ContasPage /></RotaPrivada>} />
         <Route path="/lancamentos" element={<RotaPrivada><LancamentosPage /></RotaPrivada>} />
         <Route path="/orcamentos" element={<RotaPrivada><OrcamentosPage /></RotaPrivada>} />
+        <Route path="/categorias" element={<RotaPrivada><CategoriasPage /></RotaPrivada>} />
         <Route path="/configuracoes" element={<RotaPrivada><ConfiguracoesPage /></RotaPrivada>} />
         <Route path="/contas-pagar" element={<RotaPrivada><ContasPagarPage /></RotaPrivada>} />
 

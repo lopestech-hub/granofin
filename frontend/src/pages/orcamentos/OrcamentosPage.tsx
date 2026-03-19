@@ -4,8 +4,9 @@ import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import {
-  Plus, ChevronLeft, ChevronRight, Pencil, Trash2, Target,
-  AlertTriangle, TrendingUp, Info, ArrowRight, Layers
+  Plus, Pencil, Trash2, Target, AlertTriangle,
+  ChevronLeft, ChevronRight, Info, Layers,
+  CheckCircle2,
 } from 'lucide-react'
 import { motion, AnimatePresence } from 'motion/react'
 import toast from 'react-hot-toast'
@@ -15,125 +16,217 @@ import ConfirmDialog from '@/components/ui/ConfirmDialog'
 import { orcamentosService, type Orcamento } from '@/services/orcamentos'
 import { categoriasService } from '@/services/categorias'
 import { formatarMoeda, formatarMesAno, mesAtual, anoAtual } from '@/utils/formato'
-
-const schema = z.object({
-  categoria_id: z.string().uuid('Selecione uma categoria'),
-  valor_limite: z.coerce.number().positive('Valor deve ser positivo'),
-})
-type FormData = z.infer<typeof schema>
+import { LucideIcone } from '@/utils/icone'
 
 const EASE = [0.25, 1, 0.5, 1] as [number, number, number, number]
 
-function BarraProgresso({ percentual, ultrapassado }: { percentual: number; ultrapassado: boolean }) {
-  const largura = Math.min(percentual, 100)
+// ─── Schema do formulário de alocação ───
+const schemaAlocacao = z.object({
+  categoria_id: z.string().uuid('Selecione uma categoria'),
+  percentual: z.coerce.number()
+    .positive('Informe um percentual')
+    .max(100, 'Máximo 100%'),
+})
+type FormAlocacao = z.infer<typeof schemaAlocacao>
 
+// ─── Schema do formulário de categoria ───
+const schemaCategoria = z.object({
+  nome: z.string().min(2, 'Mínimo 2 caracteres'),
+  cor: z.string().min(1),
+  icone: z.string().min(1),
+  parent_id: z.string().uuid().nullable().optional(),
+})
+type FormCategoria = z.infer<typeof schemaCategoria>
+
+// ─── Barra de progresso ───
+function BarraProgresso({ percentual, ultrapassado }: { percentual: number; ultrapassado: boolean }) {
+  const pct = Math.min(percentual, 100)
   return (
-    <div className="h-2 w-full rounded-full bg-slate-100 overflow-hidden relative border border-slate-200/20">
+    <div className="relative w-full h-2.5 bg-slate-100 rounded-full overflow-hidden">
       <motion.div
+        className={`absolute inset-y-0 left-0 rounded-full ${ultrapassado ? 'bg-rose-500' : 'bg-indigo-500'}`}
         initial={{ width: 0 }}
-        animate={{ width: `${largura}%` }}
-        transition={{ duration: 1, ease: EASE }}
-        className={`h-full rounded-full transition-colors relative ${ultrapassado ? 'bg-rose-500 shadow-[0_0_12px_rgba(244,63,94,0.4)]' :
-          percentual >= 85 ? 'bg-amber-500 shadow-[0_0_12px_rgba(245,158,11,0.4)]' :
-            'bg-indigo-600 shadow-[0_0_12px_rgba(79,70,229,0.4)]'
-          }`}
+        animate={{ width: `${pct}%` }}
+        transition={{ duration: 0.7, ease: EASE }}
       />
     </div>
   )
 }
 
+// ─── Anel de progresso SVG ───
+function AnelProgresso({ percentual, cor, ultrapassado }: { percentual: number; cor: string; ultrapassado: boolean }) {
+  const r = 30
+  const circ = 2 * Math.PI * r
+  const pct = Math.min(percentual, 100)
+  const offset = circ - (pct / 100) * circ
+  const corFill = ultrapassado ? '#f43f5e' : cor
+
+  return (
+    <svg width="80" height="80" viewBox="0 0 80 80" className="flex-shrink-0">
+      <circle cx="40" cy="40" r={r} fill="none" stroke="#f1f5f9" strokeWidth="8" />
+      <motion.circle
+        cx="40" cy="40" r={r} fill="none"
+        stroke={corFill} strokeWidth="8"
+        strokeLinecap="round"
+        strokeDasharray={circ}
+        initial={{ strokeDashoffset: circ }}
+        animate={{ strokeDashoffset: offset }}
+        transition={{ duration: 0.8, ease: EASE }}
+        transform="rotate(-90 40 40)"
+      />
+      <text x="40" y="44" textAnchor="middle" fontSize="13" fontWeight="900" fill={corFill} fontFamily="monospace">
+        {pct}%
+      </text>
+    </svg>
+  )
+}
+
+// ─── Cores e ícones sugeridos para novas categorias ───
+const CORES = ['#6366f1', '#8b5cf6', '#ec4899', '#f43f5e', '#f97316', '#eab308', '#22c55e', '#14b8a6', '#06b6d4', '#3b82f6']
+const ICONES = ['briefcase', 'home', 'heart', 'car', 'book-open', 'shopping-cart', 'credit-card', 'piggy-bank', 'trending-up', 'utensils', 'gamepad-2', 'plane', 'zap', 'tag']
+
 export default function OrcamentosPage() {
   const qc = useQueryClient()
-  const hoje = new Date()
-  const [mes, setMes] = useState(hoje.getMonth() + 1)
-  const [ano, setAno] = useState(hoje.getFullYear())
-  const [modalAberto, setModalAberto] = useState(false)
-  const [editando, setEditando] = useState<Orcamento | null>(null)
-  const [confirmando, setConfirmando] = useState<Orcamento | null>(null)
+  const [mes, setMes] = useState(mesAtual())
+  const [ano, setAno] = useState(anoAtual())
 
-  const navegarMes = (dir: -1 | 1) => {
-    const d = new Date(ano, mes - 1 + dir, 1)
-    setMes(d.getMonth() + 1)
-    setAno(d.getFullYear())
+  // Modais
+  const [modalAlocacao, setModalAlocacao] = useState(false)
+  const [editandoAlocacao, setEditandoAlocacao] = useState<Orcamento | null>(null)
+  const [confirmandoRemover, setConfirmandoRemover] = useState<Orcamento | null>(null)
+  const [modalCategoria, setModalCategoria] = useState(false)
+
+  const navegarMes = (delta: number) => {
+    let m = mes + delta
+    let a = ano
+    if (m > 12) { m = 1; a++ }
+    if (m < 1)  { m = 12; a-- }
+    setMes(m)
+    setAno(a)
   }
 
-  const { data: orcData, isLoading } = useQuery({
+  // ─── Queries ───
+  const { data, isLoading } = useQuery({
     queryKey: ['orcamentos', mes, ano],
     queryFn: () => orcamentosService.listar(mes, ano),
   })
 
-  const { data: catData } = useQuery({ queryKey: ['categorias'], queryFn: categoriasService.listar })
-
-  const orcamentos = orcData?.orcamentos ?? []
-  const categoriasDespesa = catData?.categorias.filter((c) => c.tipo === 'DESPESA') ?? []
-  const comOrcamento = new Set(orcamentos.map((o) => o.categoria_id))
-  const categoriasDisponiveis = categoriasDespesa.filter((c) => !comOrcamento.has(c.id) || editando?.categoria_id === c.id)
-
-  const { mutateAsync: criar, isPending: criando } = useMutation({
-    mutationFn: (data: FormData) => orcamentosService.criar({ ...data, mes, ano }),
-    onSuccess: () => { qc.invalidateQueries({ queryKey: ['orcamentos'] }); fecharModal(); toast.success('OrÃ§amento estabelecido') },
-    onError: () => toast.error('Falha ao criar limite'),
+  const { data: catData } = useQuery({
+    queryKey: ['categorias'],
+    queryFn: categoriasService.listar,
   })
 
-  const { mutateAsync: atualizar, isPending: atualizando } = useMutation({
-    mutationFn: ({ id, valor_limite }: { id: string; valor_limite: number }) => orcamentosService.atualizar(id, valor_limite),
-    onSuccess: () => { qc.invalidateQueries({ queryKey: ['orcamentos'] }); fecharModal(); toast.success('Meta atualizada') },
-    onError: () => toast.error('Falha ao atualizar meta'),
+  const orcamentos = data?.orcamentos ?? []
+  const receita_mes = data?.receita_mes ?? 0
+  const total_alocado_pct = data?.total_alocado_percentual ?? 0
+  const pct_livre = Math.max(0, 100 - total_alocado_pct)
+
+  const todasCategorias = catData?.categorias ?? []
+  // Apenas categorias de DESPESA
+  const categoriasDespesa = todasCategorias.filter(c => c.tipo === 'DESPESA')
+  // Categorias principais (sem parent_id)
+  const categoriasMain = categoriasDespesa.filter(c => !c.parent_id)
+  // Subcategorias (com parent_id)
+  const subcategorias = categoriasDespesa.filter(c => !!c.parent_id)
+
+  // Categorias principais que ainda não têm alocação
+  const ids_alocados = orcamentos.map(o => o.categoria_id)
+  const categoriasDisponiveis = categoriasMain.filter(c => !ids_alocados.includes(c.id))
+
+  // ─── Mutations ───
+  const { mutate: criarAlocacao, isPending: criando } = useMutation({
+    mutationFn: orcamentosService.criar,
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['orcamentos'] })
+      toast.success('Alocação criada!')
+      setModalAlocacao(false)
+      resetAlocacao()
+    },
+    onError: () => toast.error('Erro ao criar alocação'),
   })
 
-  const { mutateAsync: deletar, isPending: deletando } = useMutation({
+  const { mutate: atualizarAlocacao, isPending: atualizando } = useMutation({
+    mutationFn: ({ id, percentual }: { id: string; percentual: number }) =>
+      orcamentosService.atualizar(id, percentual),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['orcamentos'] })
+      toast.success('Alocação atualizada!')
+      setEditandoAlocacao(null)
+      resetAlocacao()
+    },
+    onError: () => toast.error('Erro ao atualizar'),
+  })
+
+  const { mutate: removerAlocacao, isPending: removendo } = useMutation({
     mutationFn: orcamentosService.deletar,
-    onSuccess: () => { qc.invalidateQueries({ queryKey: ['orcamentos'] }); setConfirmando(null); toast.success('Meta removida') },
-    onError: () => toast.error('Falha ao remover meta'),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['orcamentos'] })
+      toast.success('Alocação removida')
+      setConfirmandoRemover(null)
+    },
+    onError: () => toast.error('Erro ao remover alocação'),
   })
 
-  const { register, handleSubmit, reset, watch, formState: { errors } } = useForm<FormData>({ resolver: zodResolver(schema) })
+  const { mutate: criarCategoria, isPending: criandoCat } = useMutation({
+    mutationFn: (data: FormCategoria) =>
+      categoriasService.criar({ ...data, tipo: 'DESPESA' }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['categorias'] })
+      toast.success('Categoria criada!')
+      setModalCategoria(false)
+      resetCategoria()
+    },
+    onError: () => toast.error('Erro ao criar categoria'),
+  })
 
-  function abrirCriar() {
-    reset({ categoria_id: '' as any, valor_limite: undefined })
-    setEditando(null)
-    setModalAberto(true)
+  // ─── Forms ───
+  const { register: regAloc, handleSubmit: handleAloc, watch: watchAloc, reset: resetAlocacao,
+    formState: { errors: errsAloc } } = useForm<FormAlocacao>({ resolver: zodResolver(schemaAlocacao) })
+
+  const { register: regCat, handleSubmit: handleCat, watch: watchCat, setValue: setValCat,
+    reset: resetCategoria, formState: { errors: errsCat } } = useForm<FormCategoria>({
+    resolver: zodResolver(schemaCategoria),
+    defaultValues: { cor: CORES[0], icone: ICONES[0] },
+  })
+
+  const onSubmitAlocacao = (data: FormAlocacao) => {
+    if (editandoAlocacao) {
+      atualizarAlocacao({ id: editandoAlocacao.id, percentual: data.percentual })
+    } else {
+      criarAlocacao(data)
+    }
   }
 
-  function abrirEditar(o: Orcamento) {
-    reset({ categoria_id: o.categoria_id, valor_limite: o.valor_limite })
-    setEditando(o)
-    setModalAberto(true)
+  const abrirEditar = (o: Orcamento) => {
+    setEditandoAlocacao(o)
+    resetAlocacao({ categoria_id: o.categoria_id, percentual: o.percentual })
+    setModalAlocacao(true)
   }
 
-  function fecharModal() {
-    setModalAberto(false)
-    setEditando(null)
-    reset()
+  const fecharModal = () => {
+    setModalAlocacao(false)
+    setEditandoAlocacao(null)
+    resetAlocacao()
   }
-
-  const onSubmit = async (data: FormData) => {
-    if (editando) await atualizar({ id: editando.id, valor_limite: data.valor_limite })
-    else await criar(data)
-  }
-
-  const ultrapassados = orcamentos.filter((o) => o.ultrapassado).length
-  const totalLimite = orcamentos.reduce((a, o) => a + o.valor_limite, 0)
-  const totalGasto = orcamentos.reduce((a, o) => a + o.valor_gasto, 0)
-  const percGeral = totalLimite > 0 ? Math.round((totalGasto / totalLimite) * 100) : 0
 
   return (
     <AppShell>
-      <div className="p-8 max-w-[1400px] mx-auto space-y-10">
+      <div className="p-6 md:p-8 max-w-[1400px] mx-auto space-y-8">
 
         {/* Header */}
-        <header className="flex flex-col md:flex-row md:items-end justify-between gap-6">
-          <motion.div initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} transition={{ duration: 0.5, ease: EASE }}>
-            <h1 className="text-3xl font-extrabold text-slate-900 tracking-tight leading-none mb-2">Engenharia de Metas</h1>
-            <p className="text-slate-500 font-medium italic">Limite seus gastos e maximize sua economia</p>
+        <header className="flex flex-col md:flex-row md:items-end justify-between gap-4">
+          <motion.div initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }}>
+            <h1 className="text-3xl font-extrabold text-slate-900 tracking-tight leading-none mb-1">Orçamento</h1>
+            <p className="text-slate-400 font-medium text-sm">Distribua sua renda por categorias e controle seus gastos</p>
           </motion.div>
 
-          <div className="flex items-center gap-3">
-            <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} className="flex items-center bg-white rounded-2xl p-1 shadow-sm border border-slate-200">
+          <div className="flex items-center gap-3 flex-wrap">
+            {/* Navegação de mês */}
+            <div className="flex items-center bg-white rounded-2xl p-1 shadow-sm border border-slate-200">
               <button onClick={() => navegarMes(-1)} className="p-2 hover:bg-slate-50 rounded-xl text-slate-400 hover:text-slate-600 transition-all cursor-pointer">
                 <ChevronLeft size={18} strokeWidth={2.5} />
               </button>
-              <span className="px-6 py-1.5 text-sm font-bold text-slate-700 min-w-[140px] text-center capitalize">
+              <span className="px-4 py-1 text-sm font-bold text-slate-700 min-w-[130px] text-center capitalize">
                 {formatarMesAno(mes, ano)}
               </span>
               <button
@@ -143,227 +236,339 @@ export default function OrcamentosPage() {
               >
                 <ChevronRight size={18} strokeWidth={2.5} />
               </button>
-            </motion.div>
+            </div>
 
-            <motion.button
-              whileHover={{ scale: 1.02 }}
-              whileTap={{ scale: 0.98 }}
-              onClick={abrirCriar}
-              className="flex items-center gap-2 h-12 px-6 rounded-2xl bg-indigo-600 text-sm font-bold text-white shadow-[0_8px_16px_rgba(79,70,229,0.25)] hover:bg-indigo-700 transition-all cursor-pointer"
+            <button
+              onClick={() => setModalCategoria(true)}
+              className="flex items-center gap-2 h-10 px-4 rounded-2xl border border-slate-200 bg-white text-sm font-bold text-slate-600 hover:border-indigo-300 hover:text-indigo-600 transition-all cursor-pointer"
             >
-              <Plus size={20} strokeWidth={3} />
-              Definir Teto
-            </motion.button>
+              <Layers size={16} strokeWidth={2.5} />
+              Nova Categoria
+            </button>
+
+            <button
+              onClick={() => { setEditandoAlocacao(null); resetAlocacao(); setModalAlocacao(true) }}
+              disabled={categoriasDisponiveis.length === 0}
+              className="flex items-center gap-2 h-10 px-5 rounded-2xl bg-indigo-600 text-sm font-bold text-white shadow-[0_4px_12px_rgba(99,102,241,0.3)] hover:bg-indigo-700 transition-all cursor-pointer disabled:opacity-50"
+            >
+              <Plus size={18} strokeWidth={3} />
+              Nova Alocação
+            </button>
           </div>
         </header>
 
-        {/* Global Summary */}
-        <section className="grid grid-cols-1 lg:grid-cols-4 gap-6">
-          <div className="lg:col-span-3 card-premium p-8 relative overflow-hidden bg-gradient-to-br from-white to-slate-50/50">
-            <div className="flex flex-col md:flex-row md:items-center justify-between gap-8 relative z-10">
-              <div className="flex-1">
-                <div className="flex items-center gap-2 mb-4">
-                  <div className="p-2 rounded-xl bg-indigo-100 text-indigo-600">
-                    <TrendingUp size={18} strokeWidth={2.5} />
-                  </div>
-                  <h3 className="text-[11px] font-black uppercase tracking-widest text-indigo-400">Desempenho Geral do OrÃ§amento</h3>
-                </div>
-                <div className="flex items-baseline gap-2 mb-6">
-                  <span className={`text-5xl font-black font-mono tracking-tighter tabular-nums ${totalGasto > totalLimite ? 'text-rose-600' : 'text-slate-900'}`}>
-                    {percGeral}%
-                  </span>
-                  <span className="text-slate-400 font-bold text-sm">consumido das metas ativas</span>
-                </div>
-                <BarraProgresso percentual={percGeral} ultrapassado={totalGasto > totalLimite} />
-              </div>
-
-              <div className="hidden md:flex flex-col gap-4 border-l border-slate-200/60 pl-8 min-w-[240px]">
-                <div>
-                  <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">Limite Estabelecido</p>
-                  <p className="text-xl font-black font-mono text-slate-900 tracking-tight">{formatarMoeda(totalLimite)}</p>
-                </div>
-                <div>
-                  <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">Gasto Consolidado</p>
-                  <p className="text-xl font-black font-mono text-slate-700 tracking-tight">{formatarMoeda(totalGasto)}</p>
-                </div>
-              </div>
-            </div>
-
-            {/* Pattern */}
-            <Target size={120} className="absolute right-[-20px] bottom-[-20px] opacity-[0.03] text-indigo-600" />
+        {/* Painel de Receita */}
+        <section className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div className="card-premium p-6 flex flex-col gap-2">
+            <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Receita do Mês</p>
+            <p className="text-2xl font-black font-mono text-slate-900 tracking-tighter">{formatarMoeda(receita_mes)}</p>
+            <p className="text-[11px] text-slate-400">Base de cálculo para as alocações</p>
           </div>
-
-          <div className="space-y-4">
-            {ultrapassados > 0 && (
-              <motion.div
-                initial={{ opacity: 0, scale: 0.95 }}
-                animate={{ opacity: 1, scale: 1 }}
-                className="card-premium p-6 border-rose-200 bg-rose-50/50 flex flex-col items-center justify-center text-center gap-3"
-              >
-                <div className="w-12 h-12 rounded-2xl bg-rose-500 text-white flex items-center justify-center shadow-lg shadow-rose-500/20">
-                  <AlertTriangle size={24} strokeWidth={2.5} />
-                </div>
-                <div>
-                  <p className="text-[10px] font-black uppercase tracking-widest text-rose-400 mb-1">Alerta Critico</p>
-                  <p className="text-sm font-bold text-rose-800 leading-tight">
-                    {ultrapassados} {ultrapassados === 1 ? 'categoria ultrapassou' : 'categorias ultrapassaram'} o limite.
-                  </p>
-                </div>
-                <button className="text-[10px] font-black uppercase tracking-widest text-rose-600 underline cursor-pointer">Revisar Agora</button>
-              </motion.div>
-            )}
-
-            <div className="card-premium p-6 flex flex-col gap-3 group">
-              <div className="flex items-center gap-2">
-                <Info size={14} className="text-indigo-400" />
-                <span className="text-[10px] font-black uppercase tracking-widest text-slate-400">Dica Financeira</span>
-              </div>
-              <p className="text-xs text-slate-500 font-medium leading-relaxed italic">
-                Reduzir 10% nas metas de lazer pode aumentar sua reserva de emergÃªncia em R$ 450,00 este mÃªs.
-              </p>
-            </div>
+          <div className="card-premium p-6 flex flex-col gap-2">
+            <p className="text-[10px] font-black uppercase tracking-widest text-indigo-400">Total Alocado</p>
+            <p className="text-2xl font-black font-mono text-indigo-600 tracking-tighter">{total_alocado_pct}%</p>
+            <BarraProgresso percentual={total_alocado_pct} ultrapassado={total_alocado_pct > 100} />
+          </div>
+          <div className="card-premium p-6 flex flex-col gap-2">
+            <p className="text-[10px] font-black uppercase tracking-widest text-emerald-500">Disponível / Não Alocado</p>
+            <p className={`text-2xl font-black font-mono tracking-tighter ${pct_livre > 0 ? 'text-emerald-600' : 'text-rose-600'}`}>
+              {pct_livre}%
+            </p>
+            <p className="text-[11px] text-slate-400">{formatarMoeda(receita_mes * pct_livre / 100)} sem destino</p>
           </div>
         </section>
 
-        {/* Dashboard Grid */}
-        <section className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
+        {/* Grade de alocações */}
+        <section className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-5">
           <AnimatePresence mode="popLayout">
-            {isLoading ? (
-              [1, 2, 3].map(i => <div key={i} className="card-premium h-48 animate-pulse opacity-50" />)
-            ) : orcamentos.length === 0 ? (
-              <div className="col-span-full card-premium py-24 flex flex-col items-center justify-center border-dashed">
-                <Target size={48} className="text-slate-200 mb-4" />
-                <h3 className="text-slate-900 font-bold uppercase tracking-tight">Sem Planejamento Ativo</h3>
-                <p className="text-slate-400 text-sm mt-1">Nenhum limite de gastos foi definido para {formatarMesAno(mes, ano)}.</p>
-              </div>
-            ) : (
-              orcamentos.map((o, idx) => (
-                <motion.div
-                  key={o.id}
-                  layout
-                  initial={{ opacity: 0, y: 12 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: idx * 0.04, ease: EASE }}
-                  className={`card-premium group p-6 flex flex-col gap-5 hover:border-indigo-400 transition-all ${o.ultrapassado ? 'bg-rose-50/10 border-rose-200' : 'bg-white'
-                    }`}
-                >
-                  <div className="flex justify-between items-start">
-                    <div className="flex items-center gap-4">
-                      <div
-                        className="w-11 h-11 rounded-2xl flex items-center justify-center text-xl shadow-inner group-hover:scale-110 transition-transform duration-500"
-                        style={{ backgroundColor: o.categoria.cor + '15', color: o.categoria.cor }}
-                      >
-                        {o.categoria.icone?.substring(0, 2) ?? '📊'}
+            {isLoading
+              ? [1, 2, 3].map(i => <div key={i} className="card-premium h-52 animate-pulse opacity-40" />)
+              : orcamentos.length === 0
+              ? (
+                <div className="col-span-full card-premium py-24 flex flex-col items-center justify-center border-dashed gap-4">
+                  <Target size={48} className="text-slate-200" />
+                  <div className="text-center">
+                    <h3 className="text-slate-700 font-bold">Nenhuma alocação definida</h3>
+                    <p className="text-slate-400 text-sm mt-1">Clique em "Nova Alocação" para distribuir sua renda por categorias.</p>
+                  </div>
+                </div>
+              )
+              : orcamentos.map((o, idx) => {
+                  // Subcategorias desta alocação com seus gastos
+                  const subsDesta = subcategorias.filter(s => s.parent_id === o.categoria_id)
+
+                  return (
+                    <motion.div
+                      key={o.id}
+                      layout
+                      initial={{ opacity: 0, y: 12 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      exit={{ opacity: 0, scale: 0.95 }}
+                      transition={{ delay: idx * 0.04, ease: EASE }}
+                      className={`card-premium group p-6 flex flex-col gap-4 hover:border-indigo-200 transition-all ${o.ultrapassado ? 'border-rose-200 bg-rose-50/20' : ''}`}
+                    >
+                      {/* Cabeçalho do card */}
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="flex items-center gap-3">
+                          <div
+                            className="w-11 h-11 rounded-2xl flex items-center justify-center shadow-inner flex-shrink-0 group-hover:scale-110 transition-transform duration-500"
+                            style={{ backgroundColor: o.categoria.cor + '20', color: o.categoria.cor }}
+                          >
+                            <LucideIcone nome={o.categoria.icone ?? 'tag'} size={20} strokeWidth={2} />
+                          </div>
+                          <div>
+                            <h4 className="font-bold text-slate-800 uppercase tracking-tight leading-none">
+                              {o.categoria.nome}
+                            </h4>
+                            <p className="text-[10px] font-bold text-slate-400 mt-0.5 uppercase tracking-widest">
+                              {o.percentual}% da renda · {formatarMoeda(o.valor_alocado)}
+                            </p>
+                          </div>
+                        </div>
+
+                        {/* Anel de progresso */}
+                        <AnelProgresso
+                          percentual={o.percentual_consumido}
+                          cor={o.categoria.cor}
+                          ultrapassado={o.ultrapassado}
+                        />
                       </div>
-                      <div>
-                        <h4 className="font-bold text-slate-800 uppercase tracking-tight leading-none group-hover:text-indigo-600 transition-colors">{o.categoria.nome}</h4>
-                        <p className="text-[10px] font-bold text-slate-400 mt-1 uppercase tracking-widest">Limite Mensal</p>
+
+                      {/* Barra + valores */}
+                      <div className="space-y-2">
+                        <div className="flex justify-between items-end">
+                          <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Gasto</p>
+                          <p className={`text-sm font-black font-mono ${o.ultrapassado ? 'text-rose-600' : 'text-slate-700'}`}>
+                            {formatarMoeda(o.valor_gasto)}
+                          </p>
+                        </div>
+                        <BarraProgresso percentual={o.percentual_consumido} ultrapassado={o.ultrapassado} />
+                        <div className="flex justify-between text-[10px] text-slate-400 font-bold">
+                          <span>R$ 0</span>
+                          <span>{formatarMoeda(o.valor_alocado)}</span>
+                        </div>
                       </div>
-                    </div>
 
-                    <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                      <button onClick={() => abrirEditar(o)} className="p-2 rounded-xl bg-slate-50 text-slate-400 hover:text-slate-900 hover:bg-slate-100 transition-all cursor-pointer">
-                        <Pencil size={14} />
-                      </button>
-                      <button onClick={() => setConfirmando(o)} className="p-2 rounded-xl bg-rose-50 text-rose-400 hover:text-rose-600 hover:bg-rose-100 transition-all cursor-pointer">
-                        <Trash2 size={14} />
-                      </button>
-                    </div>
-                  </div>
+                      {/* Subcategorias vinculadas */}
+                      {subsDesta.length > 0 && (
+                        <div className="flex flex-wrap gap-1.5 border-t border-slate-50 pt-3">
+                          {subsDesta.map(sub => (
+                            <span
+                              key={sub.id}
+                              className="flex items-center gap-1 px-2 py-0.5 rounded-lg bg-slate-50 border border-slate-100 text-[10px] font-black text-slate-500 uppercase tracking-tight"
+                            >
+                              <LucideIcone nome={sub.icone ?? 'tag'} size={10} />
+                              {sub.nome}
+                            </span>
+                          ))}
+                        </div>
+                      )}
 
-                  <div className="space-y-2">
-                    <div className="flex justify-between items-end mb-1">
-                      <p className="text-2xl font-black font-mono tracking-tighter tabular-nums leading-none">
-                        {formatarMoeda(o.valor_gasto)}
-                      </p>
-                      <p className={`text-sm font-black font-mono leading-none ${o.ultrapassado ? 'text-rose-600' : 'text-indigo-600'}`}>
-                        {o.percentual}%
-                      </p>
-                    </div>
-                    <BarraProgresso percentual={o.percentual} ultrapassado={o.ultrapassado} />
-                  </div>
-
-                  <div className="flex items-center justify-between pt-2 border-t border-slate-50">
-                    <div className="flex items-center gap-1.5">
-                      <span className="text-[10px] font-bold text-slate-400 uppercase cursor-default">Total Reservado</span>
-                      <span className="text-[11px] font-black text-slate-700 font-mono tracking-tight">{formatarMoeda(o.valor_limite)}</span>
-                    </div>
-                    <div className="flex items-center gap-1 text-[10px] font-black text-indigo-400 group-hover:translate-x-1 transition-transform cursor-pointer">
-                      VER DETALHES <ArrowRight size={12} strokeWidth={3} />
-                    </div>
-                  </div>
-                </motion.div>
-              ))
-            )}
+                      {/* Ações */}
+                      <div className="flex items-center justify-between border-t border-slate-50 pt-3">
+                        {o.ultrapassado
+                          ? <span className="flex items-center gap-1 text-[10px] font-black text-rose-500 uppercase"><AlertTriangle size={12} /> Limite ultrapassado</span>
+                          : <span className="flex items-center gap-1 text-[10px] font-black text-emerald-500 uppercase"><CheckCircle2 size={12} /> No limite</span>
+                        }
+                        <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                          <button onClick={() => abrirEditar(o)} className="p-2 rounded-xl bg-slate-50 text-slate-400 hover:bg-slate-100 hover:text-slate-700 transition-all cursor-pointer">
+                            <Pencil size={14} />
+                          </button>
+                          <button onClick={() => setConfirmandoRemover(o)} className="p-2 rounded-xl bg-rose-50 text-rose-400 hover:bg-rose-100 hover:text-rose-600 transition-all cursor-pointer">
+                            <Trash2 size={14} />
+                          </button>
+                        </div>
+                      </div>
+                    </motion.div>
+                  )
+                })
+            }
           </AnimatePresence>
         </section>
+
+        {/* Dica sobre subcategorias */}
+        {subcategorias.length === 0 && orcamentos.length > 0 && (
+          <div className="card-premium p-5 flex items-center gap-3 border-indigo-100 bg-indigo-50/30">
+            <Info size={18} className="text-indigo-400 flex-shrink-0" />
+            <p className="text-sm text-indigo-600 font-medium">
+              <strong>Dica:</strong> Crie subcategorias (ex: "Transporte", "Alimentação") e vincule-as a uma categoria principal para detalhar seus gastos dentro de cada alocação.
+            </p>
+            <button onClick={() => setModalCategoria(true)} className="ml-auto flex-shrink-0 text-[11px] font-black uppercase text-indigo-600 hover:underline cursor-pointer">
+              Criar agora →
+            </button>
+          </div>
+        )}
       </div>
 
-      {/* Modal Criar/Editar (Premium) */}
-      <Modal aberto={modalAberto} titulo={editando ? 'Recalibrar Limite' : 'Novo Planejamento por Categoria'} onFechar={fecharModal}>
-        <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
-          {!editando && (
+      {/* ─── Modal: Nova Alocação / Editar ─── */}
+      <Modal
+        aberto={modalAlocacao}
+        titulo={editandoAlocacao ? `Ajustar: ${editandoAlocacao.categoria.nome}` : 'Nova Alocação de Renda'}
+        onFechar={fecharModal}
+      >
+        <form onSubmit={handleAloc(onSubmitAlocacao)} className="space-y-5">
+          {/* Seletor de categoria (apenas na criação) */}
+          {!editandoAlocacao && (
             <div>
-              <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-3 block text-center">Selecionar Categoria de Gasto</label>
-              <div className="grid grid-cols-2 gap-3 max-h-[220px] overflow-y-auto pr-2 custom-scrollbar">
-                {categoriasDisponiveis.map((c) => (
-                  <label key={c.id} className={`flex items-center gap-3 p-4 rounded-2xl border-2 transition-all cursor-pointer ${watch('categoria_id') === c.id ? 'border-indigo-600 bg-white shadow-md text-slate-900' : 'border-slate-50 bg-slate-50/50 text-slate-400 hover:border-slate-100'
-                    }`}>
-                    <input {...register('categoria_id')} type="radio" value={c.id} className="hidden" />
-                    <span className="text-xl">{c.icone}</span>
-                    <span className="text-[11px] font-black uppercase tracking-tight truncate">{c.nome}</span>
-                  </label>
-                ))}
-              </div>
-              {errors.categoria_id && <p className="mt-2 text-center text-[10px] text-rose-500 font-black uppercase">{errors.categoria_id.message}</p>}
-              {categoriasDisponiveis.length === 0 && (
-                <div className="p-4 rounded-2xl bg-indigo-50 text-indigo-600 text-center flex flex-col items-center gap-2 border border-indigo-100 mt-4">
-                  <Layers size={20} />
-                  <p className="text-[10px] font-black uppercase tracking-tight leading-relaxed">ParabÃ©ns! Todas as suas categorias já estÃ£o mapeadas no orÃ§amento.</p>
+              <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-3 block">
+                Categoria Principal
+              </label>
+              {categoriasDisponiveis.length === 0 ? (
+                <div className="p-5 rounded-2xl bg-emerald-50 text-emerald-700 text-center flex flex-col items-center gap-2 border border-emerald-100">
+                  <CheckCircle2 size={20} />
+                  <p className="text-[11px] font-black uppercase">Todas as categorias já têm alocação!</p>
                 </div>
+              ) : (
+                <div className="grid grid-cols-2 gap-2 max-h-[240px] overflow-y-auto pr-1">
+                  {categoriasDisponiveis.map(c => (
+                    <label
+                      key={c.id}
+                      className={`flex items-center gap-3 p-3.5 rounded-2xl border-2 cursor-pointer transition-all ${
+                        watchAloc('categoria_id') === c.id
+                          ? 'border-indigo-600 bg-white shadow-md text-slate-900'
+                          : 'border-slate-100 bg-slate-50 text-slate-500 hover:border-indigo-200'
+                      }`}
+                    >
+                      <input {...regAloc('categoria_id')} type="radio" value={c.id} className="hidden" />
+                      <span className="flex-shrink-0 w-7 h-7 flex items-center justify-center rounded-lg" style={{ backgroundColor: c.cor + '20', color: c.cor }}>
+                        <LucideIcone nome={c.icone} size={16} strokeWidth={2} />
+                      </span>
+                      <span className="text-[11px] font-black uppercase tracking-tight truncate">{c.nome}</span>
+                    </label>
+                  ))}
+                </div>
+              )}
+              {errsAloc.categoria_id && (
+                <p className="mt-2 text-[10px] text-rose-500 font-black uppercase">{errsAloc.categoria_id.message}</p>
               )}
             </div>
           )}
 
-          {editando && (
-            <div className="flex items-center gap-4 p-6 rounded-[2rem] bg-indigo-600 text-white shadow-xl shadow-indigo-600/20">
-              <div
-                className="flex h-12 w-12 items-center justify-center rounded-2xl text-2xl bg-white/20 shadow-inner"
-              >
-                {editando.categoria.icone?.substring(0, 2) ?? '📊'}
-              </div>
-              <div>
-                <p className="text-[10px] font-black uppercase tracking-widest opacity-60">Ajustando meta de</p>
-                <p className="text-xl font-black uppercase tracking-tight">{editando.categoria.nome}</p>
-              </div>
-            </div>
-          )}
-
+          {/* Percentual */}
           <div>
-            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 block">Teto MÃ¡ximo Mensal (R$)</label>
+            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 block">
+              % da Renda Mensal
+              {receita_mes > 0 && watchAloc('percentual') > 0 && (
+                <span className="ml-2 text-indigo-500 normal-case font-bold">
+                  ≈ {formatarMoeda(receita_mes * (watchAloc('percentual') / 100))}
+                </span>
+              )}
+            </label>
             <div className="relative">
-              <span className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 font-black">R$</span>
-              <input {...register('valor_limite')} type="number" step="0.01" className="premium-input pl-10 font-black font-mono text-xl" placeholder="0,00" />
+              <input
+                {...regAloc('percentual')}
+                type="number"
+                step="0.1"
+                min="0.1"
+                max="100"
+                placeholder="Ex: 60"
+                className="input-field pr-10 font-mono text-lg"
+              />
+              <span className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 font-black">%</span>
             </div>
-            {errors.valor_limite && <p className="mt-2 text-[10px] text-rose-500 font-bold ml-1">{errors.valor_limite.message}</p>}
+            {errsAloc.percentual && (
+              <p className="mt-1.5 text-[10px] text-rose-500 font-black uppercase">{errsAloc.percentual.message}</p>
+            )}
+            {total_alocado_pct > 0 && !editandoAlocacao && (
+              <p className="mt-1.5 text-[10px] text-slate-400 font-bold">
+                Já alocado: {total_alocado_pct}% · Disponível: {pct_livre}%
+              </p>
+            )}
           </div>
 
-          <div className="flex justify-end gap-3 pt-6 border-t border-slate-50">
-            <button type="button" onClick={fecharModal} className="h-12 px-8 rounded-2xl text-slate-500 font-bold hover:bg-slate-50 cursor-pointer text-sm">Ignorar</button>
-            <button type="submit" disabled={criando || atualizando || (!editando && categoriasDisponiveis.length === 0)} className="flex-1 h-12 rounded-2xl bg-slate-900 text-white font-black shadow-xl hover:bg-black transition-all cursor-pointer text-sm uppercase tracking-widest disabled:opacity-30">
-              {criando || atualizando ? 'Processando...' : editando ? 'Salvar AlteraÃ§Ã£o' : 'Selar OrÃ§amento'}
+          <div className="flex justify-end gap-3 pt-2">
+            <button type="button" onClick={fecharModal} className="px-4 py-2 rounded-xl text-slate-500 text-sm font-bold hover:bg-slate-50 cursor-pointer">
+              Cancelar
+            </button>
+            <button
+              type="submit"
+              disabled={criando || atualizando}
+              className="px-6 py-2 rounded-xl bg-indigo-600 text-white text-sm font-bold shadow hover:bg-indigo-700 disabled:opacity-50 cursor-pointer"
+            >
+              {editandoAlocacao ? 'Salvar' : 'Alocar'}
             </button>
           </div>
         </form>
       </Modal>
 
+      {/* ─── Modal: Nova Categoria ─── */}
+      <Modal aberto={modalCategoria} titulo="Nova Categoria" onFechar={() => { setModalCategoria(false); resetCategoria() }}>
+        <form onSubmit={handleCat(d => criarCategoria(d))} className="space-y-5">
+          <div>
+            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 block">Nome</label>
+            <input {...regCat('nome')} className="input-field" placeholder="Ex: Custo de Vida, Transporte..." />
+            {errsCat.nome && <p className="mt-1 text-[10px] text-rose-500 font-black uppercase">{errsCat.nome.message}</p>}
+          </div>
+
+          {/* Cor */}
+          <div>
+            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 block">Cor</label>
+            <div className="flex flex-wrap gap-2">
+              {CORES.map(cor => (
+                <button
+                  key={cor}
+                  type="button"
+                  onClick={() => setValCat('cor', cor)}
+                  className={`w-8 h-8 rounded-full cursor-pointer transition-all ${watchCat('cor') === cor ? 'ring-2 ring-offset-2 ring-indigo-400 scale-110' : 'hover:scale-105'}`}
+                  style={{ backgroundColor: cor }}
+                />
+              ))}
+            </div>
+          </div>
+
+          {/* Ícone */}
+          <div>
+            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 block">Ícone</label>
+            <div className="flex flex-wrap gap-2">
+              {ICONES.map(icone => (
+                <button
+                  key={icone}
+                  type="button"
+                  onClick={() => setValCat('icone', icone)}
+                  className={`w-9 h-9 rounded-xl flex items-center justify-center cursor-pointer transition-all ${
+                    watchCat('icone') === icone
+                      ? 'bg-indigo-100 text-indigo-600 ring-2 ring-indigo-300'
+                      : 'bg-slate-50 text-slate-400 hover:bg-slate-100'
+                  }`}
+                >
+                  <LucideIcone nome={icone} size={16} strokeWidth={2} />
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Categoria Principal (opcional — torna subcategoria) */}
+          <div>
+            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 block">
+              Vincular como subcategoria de... <span className="font-normal normal-case">(opcional)</span>
+            </label>
+            <select {...regCat('parent_id')} className="input-field">
+              <option value="">— Categoria Principal (sem vínculo) —</option>
+              {categoriasMain.map(c => (
+                <option key={c.id} value={c.id}>{c.nome}</option>
+              ))}
+            </select>
+          </div>
+
+          <div className="flex justify-end gap-3 pt-2">
+            <button type="button" onClick={() => { setModalCategoria(false); resetCategoria() }} className="px-4 py-2 rounded-xl text-slate-500 text-sm font-bold hover:bg-slate-50 cursor-pointer">
+              Cancelar
+            </button>
+            <button type="submit" disabled={criandoCat} className="px-6 py-2 rounded-xl bg-indigo-600 text-white text-sm font-bold shadow hover:bg-indigo-700 disabled:opacity-50 cursor-pointer">
+              Criar Categoria
+            </button>
+          </div>
+        </form>
+      </Modal>
+
+      {/* ─── Confirm Dialog ─── */}
       <ConfirmDialog
-        aberto={!!confirmando}
-        titulo="Extinguir OrÃ§amento?"
-        mensagem={`VocÃª está prestes a remover o limite estabelecido para "${confirmando?.categoria.nome}". Isso farÃ¡ com que os gastos desta categoria não sejam mais rastreados contra uma meta.`}
-        onConfirmar={() => confirmando && deletar(confirmando.id)}
-        onCancelar={() => setConfirmando(null)}
-        carregando={deletando}
+        aberto={!!confirmandoRemover}
+        titulo="Remover Alocação?"
+        mensagem={`Deseja remover a alocação de "${confirmandoRemover?.categoria.nome}"? Os lançamentos não serão afetados.`}
+        carregando={removendo}
+        onConfirmar={() => confirmandoRemover && removerAlocacao(confirmandoRemover.id)}
+        onCancelar={() => setConfirmandoRemover(null)}
       />
     </AppShell>
   )

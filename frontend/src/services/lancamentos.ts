@@ -6,13 +6,14 @@ export interface Lancamento {
   id: string
   descricao: string
   valor: number
-  tipo: 'RECEITA' | 'DESPESA'
+  tipo: 'RECEITA' | 'DESPESA' | 'TRANSFERENCIA'
   data: string
   efetivado: boolean
   observacoes?: string
   parcela_atual?: number
   total_parcelas?: number
   grupo_parcelas?: string
+  transferencia_id?: string
   categoria: Pick<Categoria, 'id' | 'nome' | 'cor' | 'icone'>
   conta: Pick<Conta, 'id' | 'nome'>
 }
@@ -22,7 +23,7 @@ export interface FiltrosLancamento {
   ano?: number
   conta_id?: string
   categoria_id?: string
-  tipo?: 'RECEITA' | 'DESPESA'
+  tipo?: 'RECEITA' | 'DESPESA' | 'TRANSFERENCIA'
 }
 
 export interface NovoLancamento {
@@ -30,11 +31,12 @@ export interface NovoLancamento {
   categoria_id: string
   descricao: string
   valor: number
-  tipo: 'RECEITA' | 'DESPESA'
+  tipo: 'RECEITA' | 'DESPESA' | 'TRANSFERENCIA'
   data: string
   efetivado?: boolean
   observacoes?: string
   total_parcelas?: number
+  transferencia_id?: string
 }
 
 function filtrosParaQuery(filtros: FiltrosLancamento): string {

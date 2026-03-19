@@ -107,6 +107,7 @@ enum ContaTipo {
 model categorias {
   id            String         @id @default(uuid())
   usuario_id    String?
+  parent_id     String?
   nome          String
   tipo          LancamentoTipo
   cor           String
@@ -117,12 +118,15 @@ model categorias {
   deletado_em   DateTime?
 
   usuario      usuarios?      @relation(fields: [usuario_id], references: [id])
+  parent       categorias?    @relation("SubCategorias", fields: [parent_id], references: [id])
+  subs         categorias[]   @relation("SubCategorias")
   lancamentos  lancamentos[]
   orcamentos   orcamentos[]
   contas_pagar contas_pagar[]
 
   @@index([usuario_id])
   @@index([tipo])
+  @@index([parent_id])
 }
 
 model lancamentos {
@@ -139,6 +143,7 @@ model lancamentos {
   parcela_atual  Int?
   total_parcelas Int?
   grupo_parcelas String?
+  transferencia_id String?
   criado_em      DateTime       @default(now())
   atualizado_em  DateTime       @updatedAt
   deletado_em    DateTime?
@@ -158,6 +163,7 @@ model lancamentos {
 enum LancamentoTipo {
   RECEITA
   DESPESA
+  TRANSFERENCIA
 }
 
 model orcamentos {
@@ -165,15 +171,16 @@ model orcamentos {
   usuario_id    String
   categoria_id  String
   valor_limite  Decimal  @db.Decimal(10, 2)
-  mes           Int
-  ano           Int
+  percentual    Decimal? @db.Decimal(5, 2)
+  mes           Int?
+  ano           Int?
   criado_em     DateTime @default(now())
   atualizado_em DateTime @updatedAt
 
   usuario   usuarios   @relation(fields: [usuario_id], references: [id])
   categoria categorias @relation(fields: [categoria_id], references: [id])
 
-  @@unique([usuario_id, categoria_id, mes, ano])
+  @@unique([usuario_id, categoria_id])
   @@index([usuario_id, mes, ano])
 }
 

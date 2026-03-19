@@ -4,10 +4,11 @@ import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import {
-  Plus, ChevronLeft, ChevronRight, ArrowUpRight, ArrowDownRight,
+  Plus, ChevronLeft, ChevronRight, ArrowUpRight, ArrowDownRight, ArrowRightLeft,
   Trash2, Pencil, CheckCircle2, Search, Filter, Calendar,
   Wallet, Layers, Clock
 } from 'lucide-react'
+import { transferenciasService } from '@/services/transferencias'
 import { motion, AnimatePresence } from 'motion/react'
 import toast from 'react-hot-toast'
 import AppShell from '@/components/layout/AppShell'
@@ -21,9 +22,10 @@ import { formatarMoeda, formatarData, formatarMesAno, mesAtual, anoAtual } from 
 const schema = z.object({
   descricao: z.string().min(1, 'Descrição obrigatória'),
   valor: z.coerce.number().positive('Valor deve ser positivo'),
-  tipo: z.enum(['RECEITA', 'DESPESA']),
-  conta_id: z.string().uuid('Selecione uma conta'),
-  categoria_id: z.string().uuid('Selecione uma categoria'),
+  tipo: z.enum(['RECEITA', 'DESPESA', 'TRANSFERENCIA']),
+  conta_id: z.string().min(1, 'Conta obrigatória'),
+  categoria_id: z.string().optional(),
+  conta_destino_id: z.string().optional(),
   data: z.string().min(1, 'Data obrigatória'),
   efetivado: z.boolean().default(true),
   observacoes: z.string().optional(),
@@ -38,8 +40,9 @@ export default function LancamentosPage() {
   const hoje = new Date()
   const [mes, setMes] = useState(hoje.getMonth() + 1)
   const [ano, setAno] = useState(hoje.getFullYear())
-  const [filtroTipo, setFiltroTipo] = useState<'TODOS' | 'RECEITA' | 'DESPESA'>('TODOS')
+  const [filtroTipo, setFiltroTipo] = useState<'TODOS' | 'RECEITA' | 'DESPESA' | 'TRANSFERENCIA'>('TODOS')
   const [modalAberto, setModalAberto] = useState(false)
+  const [comParcelas, setComParcelas] = useState(false)
   const [editando, setEditando] = useState<Lancamento | null>(null)
   const [confirmando, setConfirmando] = useState<Lancamento | null>(null)
 
@@ -65,26 +68,26 @@ export default function LancamentosPage() {
 
   const { mutateAsync: criar, isPending: criando } = useMutation({
     mutationFn: lancamentosService.criar,
-    onSuccess: () => { qc.invalidateQueries({ queryKey: ['lancamentos'] }); fecharModal(); toast.success('LanÃ§amento criado') },
-    onError: () => toast.error('Erro ao criar lanÃ§amento'),
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ['lancamentos'] }); fecharModal(); toast.success('Lançamento criado') },
+    onError: () => toast.error('Erro ao criar lançamento'),
   })
 
   const { mutateAsync: atualizar, isPending: atualizando } = useMutation({
     mutationFn: ({ id, data }: { id: string; data: Partial<NovoLancamento> }) => lancamentosService.atualizar(id, data),
-    onSuccess: () => { qc.invalidateQueries({ queryKey: ['lancamentos'] }); fecharModal(); toast.success('LanÃ§amento atualizado') },
-    onError: () => toast.error('Erro ao atualizar lanÃ§amento'),
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ['lancamentos'] }); fecharModal(); toast.success('Lançamento atualizado') },
+    onError: () => toast.error('Erro ao atualizar lançamento'),
   })
 
   const { mutateAsync: deletar, isPending: deletando } = useMutation({
     mutationFn: lancamentosService.deletar,
-    onSuccess: () => { qc.invalidateQueries({ queryKey: ['lancamentos'] }); setConfirmando(null); toast.success('LanÃ§amento removido') },
-    onError: () => toast.error('Erro ao remover lanÃ§amento'),
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ['lancamentos'] }); setConfirmando(null); toast.success('Lançamento removido') },
+    onError: () => toast.error('Erro ao remover lançamento'),
   })
 
   const { mutateAsync: efetivar } = useMutation({
     mutationFn: lancamentosService.efetivar,
     onSuccess: () => qc.invalidateQueries({ queryKey: ['lancamentos'] }),
-    onError: () => toast.error('Erro ao efetivar lanÃ§amento'),
+    onError: () => toast.error('Erro ao efetivar lançamento'),
   })
 
   const { register, handleSubmit, reset, watch, setValue, formState: { errors } } = useForm<FormData>({
@@ -98,6 +101,8 @@ export default function LancamentosPage() {
   function abrirCriar() {
     reset({ tipo: 'DESPESA', efetivado: true, data: hoje.toISOString().split('T')[0] })
     setEditando(null)
+    setComParcelas(false)
+    reset()
     setModalAberto(true)
   }
 
@@ -119,17 +124,44 @@ export default function LancamentosPage() {
   function fecharModal() {
     setModalAberto(false)
     setEditando(null)
+    setComParcelas(false)
     reset()
   }
 
   const onSubmit = async (data: FormData) => {
-    const payload: NovoLancamento = {
-      ...data,
-      data: new Date(data.data + 'T12:00:00').toISOString(),
-      total_parcelas: data.total_parcelas && data.total_parcelas > 1 ? data.total_parcelas : undefined,
+    try {
+      if (data.tipo === 'TRANSFERENCIA') {
+        if (!data.conta_destino_id) return toast.error('Selecione a conta de destino')
+        if (data.conta_id === data.conta_destino_id) return toast.error('As contas devem ser diferentes')
+        
+        await transferenciasService.criar({
+          conta_origem_id: data.conta_id,
+          conta_destino_id: data.conta_destino_id,
+          valor: data.valor,
+          data: new Date(data.data + 'T12:00:00').toISOString(),
+          observacoes: data.observacoes,
+        })
+        toast.success('Transferência realizada')
+      } else {
+        if (!data.categoria_id) return toast.error('Selecione uma categoria')
+        
+        const payload: NovoLancamento = {
+          ...data,
+          categoria_id: data.categoria_id!,
+          data: new Date(data.data + 'T12:00:00').toISOString(),
+          total_parcelas: data.total_parcelas && data.total_parcelas > 1 ? data.total_parcelas : undefined,
+        }
+        
+        if (editando) await atualizar({ id: editando.id, data: payload })
+        else await criar(payload)
+      }
+      
+      qc.invalidateQueries({ queryKey: ['lancamentos'] })
+      qc.invalidateQueries({ queryKey: ['contas'] })
+      fecharModal()
+    } catch (e: any) {
+      toast.error('Ocorreu um erro ao salvar')
     }
-    if (editando) await atualizar({ id: editando.id, data: payload })
-    else await criar(payload)
   }
 
   // Group by date
@@ -226,14 +258,14 @@ export default function LancamentosPage() {
         <div className="flex items-center justify-between gap-4 flex-wrap bg-white/50 backdrop-blur-sm p-4 rounded-2xl border border-slate-200/60 shadow-sm">
           <div className="flex items-center gap-1.5 font-bold uppercase tracking-wider text-[11px]">
             <Filter size={14} className="text-slate-400 mr-2" />
-            {(['TODOS', 'RECEITA', 'DESPESA'] as const).map((t) => (
+            {(['TODOS', 'RECEITA', 'DESPESA', 'TRANSFERENCIA'] as const).map((t) => (
               <button
                 key={t}
                 onClick={() => setFiltroTipo(t)}
                 className={`px-4 py-1.5 rounded-xl transition-all cursor-pointer ${filtroTipo === t ? 'bg-slate-900 text-white shadow-lg shadow-slate-900/20' : 'text-slate-500 hover:bg-slate-100'
                   }`}
               >
-                {t === 'TODOS' ? 'Geral' : t === 'RECEITA' ? 'Receitas' : 'Despesas'}
+                {t === 'TODOS' ? 'Geral' : t === 'RECEITA' ? 'Receitas' : t === 'DESPESA' ? 'Despesas' : 'Trocas'}
               </button>
             ))}
           </div>
@@ -282,15 +314,7 @@ export default function LancamentosPage() {
                         className="card-premium group flex items-center gap-6 p-4 hover:border-indigo-100 transition-all cursor-pointer"
                         title={l.observacoes}
                       >
-                        {/* Categoria Icon */}
-                        <div
-                          className="w-11 h-11 rounded-2xl flex items-center justify-center text-xl shadow-inner group-hover:scale-110 transition-transform duration-500"
-                          style={{ backgroundColor: l.categoria.cor + '15', color: l.categoria.cor }}
-                        >
-                          {l.categoria.icone?.substring(0, 2) ?? '💰'}
-                        </div>
-
-                        {/* Description & Metadata */}
+                        {/* Descrição e Metadados */}
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center gap-3 mb-1">
                             <h4 className="font-bold text-slate-800 truncate leading-tight group-hover:text-indigo-600 transition-colors uppercase tracking-tight">
@@ -318,7 +342,7 @@ export default function LancamentosPage() {
                             {l.tipo === 'RECEITA' ? (
                               <ArrowUpRight className="text-green-500" size={16} strokeWidth={3} />
                             ) : (
-                              <ArrowDownRight className="text-slate-400" size={16} strokeWidth={2.5} />
+                              <ArrowDownRight className="text-rose-500" size={16} strokeWidth={3} />
                             )}
                             <span className={`text-lg font-black font-mono tabular-nums tracking-tighter ${l.tipo === 'RECEITA' ? 'text-green-600' : 'text-slate-900'}`}>
                               {l.tipo === 'RECEITA' ? '+' : ''}{formatarMoeda(l.valor)}
@@ -366,22 +390,24 @@ export default function LancamentosPage() {
       </div>
 
       {/* Modal Criar/Editar (Premium Version) */}
-      <Modal aberto={modalAberto} titulo={editando ? 'Ajustar Movimentação' : 'Nova Inteligência de Fluxo'} onFechar={fecharModal} largura="lg">
+      <Modal aberto={modalAberto} titulo={editando ? 'Ajustar Movimentação' : 'Nova Inteligência de Fluxo 🚀'} onFechar={fecharModal} largura="lg">
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
           <div className="flex gap-2">
-            {(['DESPESA', 'RECEITA'] as const).map((t) => (
+            {(['DESPESA', 'TRANSFERENCIA', 'RECEITA'] as const).map((t) => (
               <button
                 key={t}
                 type="button"
                 onClick={() => { setValue('tipo', t); setValue('categoria_id', '' as any) }}
-                className={`flex-1 flex items-center justify-center gap-2 h-12 rounded-2xl border-2 font-black text-xs uppercase tracking-widest transition-all cursor-pointer ${tipoForm === t
+                className={`flex-1 flex items-center justify-center gap-2 h-12 rounded-2xl border-2 font-black text-[10px] uppercase tracking-widest transition-all cursor-pointer ${tipoForm === t
                   ? t === 'RECEITA'
                     ? 'border-green-500 bg-white text-green-600 shadow-md'
-                    : 'border-rose-500 bg-white text-rose-600 shadow-md'
+                    : t === 'TRANSFERENCIA'
+                      ? 'border-indigo-600 bg-white text-indigo-600 shadow-md'
+                      : 'border-rose-500 bg-white text-rose-600 shadow-md'
                   : 'border-slate-50 text-slate-300 hover:border-slate-100'
                   }`}
               >
-                {t === 'RECEITA' ? <ArrowUpRight size={16} /> : <ArrowDownRight size={16} />}
+                {t === 'RECEITA' ? <ArrowUpRight size={16} /> : t === 'TRANSFERENCIA' ? <ArrowRightLeft size={16} /> : <ArrowDownRight size={16} />}
                 {t}
               </button>
             ))}
@@ -408,29 +434,69 @@ export default function LancamentosPage() {
             </div>
 
             <div>
-              <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 block">Qual conta?</label>
+              <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 block">
+                {tipoForm === 'TRANSFERENCIA' ? 'Sair de qual conta?' : 'Qual conta?'}
+              </label>
               <select {...register('conta_id')} className="premium-select font-bold">
                 <option value="">Selecione...</option>
                 {contas.map(c => <option key={c.id} value={c.id}>{c.nome}</option>)}
               </select>
             </div>
 
-            <div>
-              <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 block">Qual categoria?</label>
-              <select {...register('categoria_id')} className="premium-select font-bold">
-                <option value="">Selecione...</option>
-                {categoriasFiltradas.map(c => <option key={c.id} value={c.id}>{c.icone} {c.nome}</option>)}
-              </select>
-            </div>
+            {tipoForm === 'TRANSFERENCIA' ? (
+              <div>
+                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 block text-indigo-600 italic">Chegar em qual conta?</label>
+                <select {...register('conta_destino_id')} className="premium-select font-bold border-indigo-200">
+                  <option value="">Selecione...</option>
+                  {contas.map(c => <option key={c.id} value={c.id}>{c.nome}</option>)}
+                </select>
+              </div>
+            ) : (
+              <div>
+                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 block">Qual categoria?</label>
+                <select {...register('categoria_id')} className="premium-select font-bold">
+                  <option value="">Selecione...</option>
+                  {categoriasFiltradas.map(c => (
+                    <option key={c.id} value={c.id}>
+                      {c.parent_id ? `↳ ${c.nome}` : c.nome}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            )}
 
+            {/* Parcelamento Toggle */}
             {!editando && tipoForm === 'DESPESA' && (
-              <div className="col-span-full">
-                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 block">Parcelamento (Opcional)</label>
+              <div className="col-span-full flex items-center justify-between p-3 rounded-2xl border border-slate-100 bg-slate-50/50">
+                <div className="flex items-center gap-2">
+                  <Layers size={14} className="text-slate-400" />
+                  <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest">É uma compra parcelada?</span>
+                </div>
+                <label className="relative flex items-center cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={comParcelas}
+                    onChange={(e) => setComParcelas(e.target.checked)}
+                    className="sr-only peer"
+                  />
+                  <div className="w-9 h-5 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-indigo-600" />
+                </label>
+              </div>
+            )}
+
+            {!editando && tipoForm === 'DESPESA' && comParcelas && (
+              <motion.div
+                initial={{ opacity: 0, y: -10, height: 0 }}
+                animate={{ opacity: 1, y: 0, height: 'auto' }}
+                exit={{ opacity: 0, y: -10, height: 0 }}
+                className="col-span-full"
+              >
+                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 block">Número de Parcelas</label>
                 <div className="relative">
-                  <input {...register('total_parcelas')} type="number" min="1" max="60" className="premium-input pl-4" placeholder="Número de parcelas (ex: 12)" />
+                  <input {...register('total_parcelas')} type="number" min="2" max="60" className="premium-input pl-4" placeholder="Ex: 12" />
                   <Layers size={16} className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-300" />
                 </div>
-              </div>
+              </motion.div>
             )}
 
             <div className="col-span-full bg-slate-50 p-4 rounded-2xl flex items-center justify-between border border-slate-100">

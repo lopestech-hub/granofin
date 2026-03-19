@@ -472,8 +472,8 @@ TRIAL_DIAS=14
 - **Etapa 2 (Stack):** React + Vite, React Native Expo, Fastify, Prisma, PostgreSQL — todos compatíveis ✅
 - **Etapa 3 (Libs):** RHF+Zod, TanStack Query, Recharts, date-fns, dinero.js, Stripe, Nodemailer, @fastify/helmet, @fastify/rate-limit
 - **Etapa 4 (Módulos):** auth, usuarios, assinaturas, contas, categorias, lancamentos, orcamentos, relatorios, webhooks
-- **Etapa 5 (Banco):** 7 tabelas + 3 enums — schema completo com Decimal, soft delete, refresh_tokens, índices compostos
-- **Etapa 6 (Rotas):** 32 rotas distribuídas em 9 módulos
+- **Etapa 5 (Banco):** 8 tabelas + 5 enums — schema completo com Decimal, soft delete, refresh_tokens, índices compostos
+- **Etapa 6 (Rotas):** 34+ rotas distribuídas em 10 módulos
 - **Etapa 7 (Pastas):** monorepo frontend/ + mobile/ + backend/ + Dockerfile na raiz
 - **Etapa 8 (Dockerfile):** multi-stage build — frontend builder + backend builder → imagem final única
 - **Etapa 9 (Envs):** 20 variáveis mapeadas no .env.example
@@ -483,31 +483,45 @@ TRIAL_DIAS=14
   - **Causa raiz:** `@fastify/static` + `setNotFoundHandler` redirecionava para `index.html`, mas rotas como `/contas-pagar` existiam no backend E no React Router simultaneamente.
   - **Solução arquitetural aplicada:** todos os endpoints da API foram movidos para o prefixo `/api` (ex: `/api/auth`, `/api/contas-pagar`). O `BASE_URL` no `api.ts` foi atualizado para `/api` e o proxy do Vite simplificado para um único mapeamento `/api → localhost:3000`.
 
+## 🛠️ Dívida Técnica Mapeada
+
+| Prioridade | Local | Detalhe |
+|------------|-------|---------|
+| 🔴 **Alta** | `backend/src/routes/auth/index.ts:17` | `tokensReset = new Map` em memória — tokens de reset de senha são perdidos em restart do servidor e não funcionam com múltiplas instâncias. Migrar para banco ou Redis na Fase 3 |
+| 🟡 **Média** | `frontend/src/components/layout/AppShell.tsx:168` | "Membro Pro" hardcoded na sidebar — não reflete o plano real (TRIAL/MENSAL/ANUAL). Conectar ao `GET /assinaturas/status` |
+| 🟡 **Média** | `frontend/src/pages/configuracoes/ConfiguracoesPage.tsx` | Página stub com apenas 404 bytes — sem conteúdo real |
+| 🟡 **Média** | `backend/src/routes/relatorios/index.ts:97` | Loop sequencial no relatório `evolucao` — N queries sequenciais. Refatorar com `Promise.all` |
+| 🟢 **Baixa** | `backend/scripts/` | 15 scripts de migração/debug acumulados — revisar e remover os descartáveis |
+| 🟢 **Baixa** | Todos os módulos | Zero cobertura de testes automatizados (Vitest configurado mas sem specs) |
+| 🟢 **Baixa** | `frontend/` | Ícones PWA em SVG — gerar versões PNG se necessário para compatibilidade legacy |
+
 ## 📅 Última Sessão — O que foi feito e testado
 
-- 2026-03-04: **Correção de bug crítico em produção + integração do logo SVG**
-  - `backend/src/server.ts` — todas as rotas da API encapsuladas sob o prefixo `/api`
-  - `frontend/src/services/api.ts` — `BASE_URL` atualizado de `''` para `'/api'`; refresh token também ajustado para `/api/auth/refresh`
-  - `frontend/vite.config.ts` — proxy simplificado para único mapeamento `/api → localhost:3000`
-  - `frontend/src/pages/contas-pagar/ContasPagarPage.tsx` — validação Zod corrigida com `z.preprocess` para campos de parcelas/ocorrências opcionais, payload com `recorrencia: 'NENHUMA'` garantido por padrão
-  - `frontend/src/components/ui/Logo.tsx` — componente SVG customizado com G geométrico + semente brilhante integrado
-  - TypeScript: zero erros (`npx tsc --noEmit`) em backend e frontend
-  - Deploy: commit + push → EasyPanel auto-deploy em andamento
+- 2026-03-04: **Fix crítico produção:** rotas API movidas para `/api`, fix validação Contas a Pagar, logo SVG
+- 2026-03-18: **Sessão de Transferências e PWA (Sessão Atual)**
+  - Implementada funcionalidade de **Transferência entre Contas** com atomicidade ($transaction)
+  - Criada página de **Preferências/Configurações** completa com edição de perfil e WhatsApp
+  - Implementado **PWA** com `vite-plugin-pwa`, suporte offline e ícone customizado
+  - Build de produção validado com zero erros de TypeScript
+  - Versão atualizada para **1.2.0** no `version.json`
+  - Deploy no EasyPanel iniciado via commit/push
 
 ## ➡️ Próximos Passos
 
-1. Verificar saúde do deploy no EasyPanel (URL: [applications-granofin.tbs25p.easypanel.host](https://applications-granofin.tbs25p.easypanel.host))
-2. **Criar bucket no Cloudflare R2** e configurar variáveis R2_* no EasyPanel
-3. Iniciar **Fase 3**: integração Stripe (checkout, webhooks, controle de acesso por plano), tela de assinatura/upgrade, relatórios com gráfico de pizza por categoria
+1. Validar PWA no ambiente de produção (celular/desktop)
+2. Iniciar **Fase 3**: integração Stripe e Relatórios Avançados (gráfico de pizza por categoria)
+3. Implementar **idempotência** nos webhooks do Stripe
 
 ## 📅 Histórico de Mudanças
 
-| Data       | Mudança                                                                                              |
-|------------|------------------------------------------------------------------------------------------------------|
-| 2026-03-03 | Planejamento inicial completo — CONTEXTO.MD criado                                                   |
-| 2026-03-03 | Fase 1 concluída — estrutura completa do monorepo, backend, auth e frontend base                     |
-| 2026-03-03 | Fase 2 concluída — layout, dashboard, contas, lançamentos, orçamentos + sistema de design            |
-| 2026-03-03 | Campo `telefone` adicionado à tabela `usuarios` — migration, schema, backend e frontend atualizados  |
-| 2026-03-04 | Módulo Contas a Pagar implementado — tabela, 8 rotas backend, plugin R2, página frontend completa    |
-| 2026-03-04 | Redesign visual completo — split auth, animações motion/react, sidebar refinada, deploy EasyPanel    |
-| 2026-03-04 | **Fix crítico produção:** rotas API movidas para `/api`, fix validação Contas a Pagar, logo SVG      |
+| Data       | Mudança                                                                                                    |
+|------------|------------------------------------------------------------------------------------------------------------|
+| 2026-03-03 | Planejamento inicial completo — CONTEXTO.MD criado                                                         |
+| 2026-03-03 | Fase 1 concluída — estrutura completa do monorepo, backend, auth e frontend base                           |
+| 2026-03-03 | Fase 2 concluída — layout, dashboard, contas, lançamentos, orçamentos + sistema de design                  |
+| 2026-03-03 | Campo `telefone` adicionado à tabela `usuarios` — migration, schema, backend e frontend atualizados        |
+| 2026-03-04 | Módulo Contas a Pagar implementado — tabela, 8 rotas backend, plugin R2, página frontend completa          |
+| 2026-03-04 | Redesign visual completo — split auth, animações motion/react, sidebar refinada, deploy EasyPanel          |
+| 2026-03-04 | **Fix crítico produção:** rotas API movidas para `/api`, fix validação Contas a Pagar, logo SVG            |
+| 2026-03-18 | **Funcionalidade de Transferência** adicionada ao core do sistema                                         |
+| 2026-03-18 | **Página de Preferências** e suporte a **PWA** implementados com sucesso                                  |

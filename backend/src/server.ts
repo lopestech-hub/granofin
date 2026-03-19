@@ -16,6 +16,7 @@ import { relatoriosRoutes } from './routes/relatorios'
 import { assinaturasRoutes } from './routes/assinaturas'
 import { webhooksRoutes } from './routes/webhooks'
 import { contasPagarRoutes } from './routes/contas-pagar'
+import { transferenciasRoutes } from './routes/transferencias'
 import { r2Plugin } from './plugins/r2'
 import multipart from '@fastify/multipart'
 
@@ -65,6 +66,7 @@ async function main() {
     await api.register(assinaturasRoutes, { prefix: '/assinaturas' })
     await api.register(webhooksRoutes, { prefix: '/webhooks' })
     await api.register(contasPagarRoutes, { prefix: '/contas-pagar' })
+    await api.register(transferenciasRoutes, { prefix: '/transferencias' })
   }, { prefix: '/api' })
 
 

@@ -5,7 +5,7 @@ import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import {
   Plus, Pencil, Trash2, Wallet, CreditCard, PiggyBank, CircleEllipsis,
-  ArrowUpRight, ArrowRight, Landmark
+  ArrowRight, Landmark
 } from 'lucide-react'
 import { motion, AnimatePresence } from 'motion/react'
 import toast from 'react-hot-toast'
@@ -16,7 +16,7 @@ import { contasService, type Conta } from '@/services/contas'
 import { formatarMoeda } from '@/utils/formato'
 
 const schema = z.object({
-  nome: z.string().min(1, 'Nome obrigatÃ³rio'),
+  nome: z.string().min(1, 'Nome obrigatório'),
   tipo: z.enum(['CARTEIRA', 'CONTA_CORRENTE', 'POUPANCA', 'OUTRO']),
   saldo_inicial: z.coerce.number().default(0),
 })
@@ -57,7 +57,7 @@ export default function ContasPage() {
 
   const { mutateAsync: atualizar, isPending: atualizando } = useMutation({
     mutationFn: ({ id, data }: { id: string; data: Partial<Conta> }) => contasService.atualizar(id, data),
-    onSuccess: () => { qc.invalidateQueries({ queryKey: ['contas'] }); fecharModal(); toast.success('AlteraÃ§Ãµes salvas') },
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ['contas'] }); fecharModal(); toast.success('Alterações salvas') },
     onError: () => toast.error('Falha ao atualizar dados'),
   })
 
@@ -96,7 +96,7 @@ export default function ContasPage() {
     else await criar(data)
   }
 
-  const saldoTotal = contas.reduce((acc, c) => acc + c.saldo_inicial, 0)
+  const saldoTotal = contas.reduce((acc, c: any) => acc + Number(c.saldo_atual ?? c.saldo_inicial), 0)
 
   return (
     <AppShell>
@@ -106,7 +106,7 @@ export default function ContasPage() {
         <header className="flex flex-col md:flex-row md:items-end justify-between gap-6">
           <motion.div initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} transition={{ duration: 0.5, ease: EASE }}>
             <h1 className="text-3xl font-extrabold text-slate-900 tracking-tight leading-none mb-2">Carteira Digital</h1>
-            <p className="text-slate-500 font-medium italic">GestÃ£o e liquidez das suas contas financeiras</p>
+            <p className="text-slate-500 font-medium italic">Gestão e liquidez das suas contas financeiras</p>
           </motion.div>
 
           <motion.button
@@ -124,15 +124,11 @@ export default function ContasPage() {
         <section className="bg-indigo-600 rounded-[2rem] p-8 md:p-12 text-white relative overflow-hidden shadow-2xl shadow-indigo-600/20">
           <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-8">
             <div>
-              <p className="text-[11px] font-black uppercase tracking-[0.2em] mb-3 opacity-60">PatrimÃ´nio Total Liquidado</p>
+              <p className="text-[11px] font-black uppercase tracking-[0.2em] mb-3 opacity-60">Patrimônio Total Liquidado</p>
               <div className="flex items-baseline gap-2">
                 <span className="text-5xl md:text-6xl font-black font-mono tracking-tighter tabular-nums leading-none">
                   {formatarMoeda(saldoTotal)}
                 </span>
-                <div className="flex items-center gap-1.5 px-2 py-1 rounded-lg bg-white/10 text-[10px] font-bold">
-                  <ArrowUpRight size={14} className="text-green-400" />
-                  <span>+12.4% este mÃªs</span>
-                </div>
               </div>
             </div>
 
@@ -140,10 +136,6 @@ export default function ContasPage() {
               <div className="text-center">
                 <p className="text-[10px] font-bold uppercase opacity-60 mb-2">Contas Ativas</p>
                 <p className="text-2xl font-black">{contas.length}</p>
-              </div>
-              <div className="text-center">
-                <p className="text-[10px] font-bold uppercase opacity-60 mb-2">Liquidez Imediata</p>
-                <p className="text-2xl font-black">94%</p>
               </div>
             </div>
           </div>
@@ -204,7 +196,7 @@ export default function ContasPage() {
 
                     <div className="flex justify-between items-end">
                       <p className="text-2xl font-black font-mono text-indigo-600 tracking-tighter tabular-nums">
-                        {formatarMoeda(conta.saldo_inicial)}
+                        {formatarMoeda((conta as any).saldo_atual ?? conta.saldo_inicial)}
                       </p>
                       <div className="flex items-center gap-1.5 text-slate-300 group-hover:text-indigo-600 transition-colors">
                         <ArrowRight size={16} strokeWidth={3} />
@@ -238,7 +230,7 @@ export default function ContasPage() {
             </div>
 
             <div>
-              <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-3 block text-center">Modelo de OperaÃ§Ã£o</label>
+              <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-3 block text-center">Modelo de Operação</label>
               <div className="grid grid-cols-2 gap-3">
                 {TIPOS.map(({ value, label, icon: Icon }) => (
                   <label key={value} className={`flex items-center gap-3 p-4 rounded-2xl border-2 transition-all cursor-pointer ${tipoSelecionado === value ? 'border-indigo-600 bg-white shadow-md text-slate-900' : 'border-slate-50 bg-slate-50/50 text-slate-400 hover:border-slate-100'

@@ -4,13 +4,20 @@ import type { Categoria } from './categorias'
 export interface Orcamento {
   id: string
   categoria_id: string
-  valor_limite: number
-  valor_gasto: number
   percentual: number
+  valor_alocado: number
+  valor_gasto: number
+  percentual_consumido: number
   ultrapassado: boolean
-  mes: number
-  ano: number
+  subcategorias: string[]
   categoria: Pick<Categoria, 'id' | 'nome' | 'cor' | 'icone'>
+}
+
+export interface ResumoOrcamentos {
+  success: boolean
+  receita_mes: number
+  total_alocado_percentual: number
+  orcamentos: Orcamento[]
 }
 
 export const orcamentosService = {
@@ -19,11 +26,11 @@ export const orcamentosService = {
     if (mes) params.set('mes', String(mes))
     if (ano) params.set('ano', String(ano))
     const qs = params.toString()
-    return api.get<{ success: boolean; orcamentos: Orcamento[] }>(`/orcamentos${qs ? '?' + qs : ''}`)
+    return api.get<ResumoOrcamentos>(`/orcamentos${qs ? '?' + qs : ''}`)
   },
-  criar: (data: { categoria_id: string; valor_limite: number; mes: number; ano: number }) =>
+  criar: (data: { categoria_id: string; percentual: number }) =>
     api.post<{ success: boolean; orcamento: Orcamento }>('/orcamentos', data),
-  atualizar: (id: string, valor_limite: number) =>
-    api.put<{ success: boolean; orcamento: Orcamento }>(`/orcamentos/${id}`, { valor_limite }),
+  atualizar: (id: string, percentual: number) =>
+    api.put<{ success: boolean; orcamento: Orcamento }>(`/orcamentos/${id}`, { percentual }),
   deletar: (id: string) => api.delete<{ success: boolean }>(`/orcamentos/${id}`),
 }

@@ -3,7 +3,12 @@ import { z } from 'zod'
 
 const schemaAtualizarPerfil = z.object({
   nome: z.string().min(2).optional(),
-  avatar_url: z.string().url().optional(),
+  telefone: z
+    .string()
+    .regex(/^55\d{10}$/, 'Formato inválido. Use: 55 + DDD + 8 dígitos (ex: 558988039126)')
+    .optional()
+    .nullable(),
+  avatar_url: z.string().url().or(z.literal('')).optional().nullable(),
 })
 
 export const usuariosRoutes: FastifyPluginAsync = async (app) => {
@@ -45,7 +50,7 @@ export const usuariosRoutes: FastifyPluginAsync = async (app) => {
     const usuario = await app.prisma.usuarios.update({
       where: { id },
       data: resultado.data,
-      select: { id: true, nome: true, email: true, avatar_url: true },
+      select: { id: true, nome: true, email: true, avatar_url: true, telefone: true },
     })
 
     return reply.send({ success: true, usuario })

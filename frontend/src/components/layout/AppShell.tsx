@@ -10,7 +10,8 @@ import {
   LogOut,
   Menu,
   ChevronRight,
-  ShieldCheck
+  ShieldCheck,
+  Tag
 } from 'lucide-react'
 import { Logo } from '@/components/ui/Logo'
 import { motion, AnimatePresence } from 'motion/react'
@@ -21,8 +22,9 @@ const NAV_ITEMS = [
   { to: '/dashboard', icon: LayoutDashboard, label: 'Resumo Geral' },
   { to: '/contas', icon: Wallet, label: 'Minhas Contas' },
   { to: '/lancamentos', icon: ArrowLeftRight, label: 'Transações' },
-  { to: '/orcamentos', icon: Target, label: 'Planejamento' },
-  { to: '/contas-pagar', icon: CalendarClock, label: 'Compromissos' },
+  { to: '/orcamentos', icon: Target, label: 'Orçamento' },
+  { to: '/categorias', icon: Tag, label: 'Categorias' },
+  { to: '/contas-pagar', icon: CalendarClock, label: 'Contas a Pagar' },
 ]
 
 interface Props {

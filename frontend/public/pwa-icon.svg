@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <!-- Fundo -->
+  <rect width="512" height="512" rx="120" fill="#0f172a"/>
+  
+  <!-- Círculo decorativo -->
+  <circle cx="256" cy="256" r="160" fill="none" stroke="#6366f1" stroke-width="18" opacity="0.3"/>
+  
+  <!-- Letra G estilizada em indigo -->
+  <path d="M310 185 A90 90 0 1 0 346 256 L256 256 L256 228 L330 228 L330 300 A110 110 0 1 1 198 170" 
+        fill="none" stroke="#6366f1" stroke-width="28" stroke-linecap="round" stroke-linejoin="round"/>
+  
+  <!-- Seta de alta para cima (dourada) -->
+  <path d="M296 160 L328 128 L360 160" fill="none" stroke="#f59e0b" stroke-width="20" stroke-linecap="round" stroke-linejoin="round"/>
+  <line x1="328" y1="128" x2="328" y2="200" stroke="#f59e0b" stroke-width="20" stroke-linecap="round"/>
+</svg>

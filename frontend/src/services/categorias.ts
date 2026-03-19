@@ -7,6 +7,7 @@ export interface Categoria {
   cor: string
   icone: string
   padrao: boolean
+  parent_id?: string | null
   usuario_id?: string | null
 }
 
