@@ -43,7 +43,8 @@ const schema = z.object({
   tipo: z.enum(['RECEITA', 'DESPESA']),
   cor: z.string().min(1, 'Selecione uma cor'),
   icone: z.string().min(1, 'Selecione um ícone'),
-  parent_id: z.string().uuid().nullable().optional(),
+  parent_id: z.string().uuid().or(z.literal('')).nullable().optional()
+    .transform(v => (v === '' ? null : v)),
 })
 type FormData = z.infer<typeof schema>
 
@@ -64,13 +65,14 @@ export default function CategoriasPage() {
   })
 
   const todasCategorias = data?.categorias ?? []
-  // Filtra pela aba ativa e apenas categorias do usuário (não padrão) + padrão
+  // Filtra pela aba ativa
   const daAba = todasCategorias.filter(c => c.tipo === aba)
   // Categorias principais (sem parent) e subcategorias (com parent)
   const principais = daAba.filter(c => !c.parent_id)
   const subcategorias = daAba.filter(c => !!c.parent_id)
-  // Para o select de pai (apenas principais de DESPESA disponíveis)
-  const mainsDespesa = todasCategorias.filter(c => c.tipo === 'DESPESA' && !c.parent_id)
+
+  // Categorias principais para o select de pai (filtradas pelo tipo selecionado no form)
+  const [isSub, setIsSub] = useState(false)
 
   // ─── Mutations ───
   const { mutate: criar, isPending: criando } = useMutation({
@@ -122,12 +124,14 @@ export default function CategoriasPage() {
 
   const abrirCriar = () => {
     setEditando(null)
+    setIsSub(false)
     reset({ tipo: aba, cor: CORES[0], icone: iconesPorTipo[0], parent_id: null })
     setModalAberto(true)
   }
 
   const abrirEditar = (c: Categoria) => {
     setEditando(c)
+    setIsSub(!!c.parent_id)
     reset({
       nome: c.nome,
       tipo: c.tipo,
@@ -259,7 +263,7 @@ export default function CategoriasPage() {
           ))}
         </div>
 
-        {/* Lista */}
+        {/* Lista Agrupada */}
         {isLoading ? (
           <div className="space-y-3">
             {[1, 2, 3, 4].map(i => <div key={i} className="card-premium h-16 animate-pulse opacity-40" />)}
@@ -273,44 +277,41 @@ export default function CategoriasPage() {
             </div>
           </div>
         ) : (
-          <div className="space-y-6">
-            {/* Categorias Principais */}
-            <div>
-              <div className="flex items-center gap-2 mb-3 px-1">
-                <Tag size={13} className="text-slate-400" />
-                <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">
-                  Categorias Principais ({principais.length})
-                </p>
-              </div>
-              <div className="space-y-2">
-                <AnimatePresence mode="popLayout">
-                  {principais.length === 0 ? (
-                    <div className="card-premium py-8 text-center border-dashed">
-                      <p className="text-slate-400 text-sm">Nenhuma categoria principal.</p>
-                    </div>
-                  ) : (
-                    principais.map(cat => <CardCategoria key={cat.id} cat={cat} />)
-                  )}
-                </AnimatePresence>
-              </div>
-            </div>
+          <div className="space-y-4">
+            <AnimatePresence mode="popLayout">
+              {principais.map(pai => {
+                const filhos = subcategorias.filter(s => s.parent_id === pai.id)
+                
+                return (
+                  <div key={pai.id} className="space-y-2">
+                    {/* Categoria Principal */}
+                    <CardCategoria cat={pai} />
 
-            {/* Subcategorias */}
-            {subcategorias.length > 0 && (
-              <div>
-                <div className="flex items-center gap-2 mb-3 px-1">
-                  <Layers size={13} className="text-indigo-400" />
-                  <p className="text-[10px] font-black text-indigo-400 uppercase tracking-widest">
-                    Subcategorias ({subcategorias.length})
-                  </p>
+                    {/* Subcategorias aninhadas */}
+                    {filhos.length > 0 && (
+                      <div className="ml-6 pl-4 border-l-2 border-slate-100 space-y-2 py-1">
+                        {filhos.map(filho => (
+                          <CardCategoria key={filho.id} cat={filho} isSub />
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                )
+              })}
+
+              {/* Caso existam subcategorias órfãs (sem pai encontrado) */}
+              {subcategorias.filter(s => !principais.find(p => p.id === s.parent_id)).length > 0 && (
+                <div className="pt-4 border-t border-slate-100">
+                  <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-3">Outras Subcategorias</p>
+                  <div className="space-y-2">
+                    {subcategorias
+                      .filter(s => !principais.find(p => p.id === s.parent_id))
+                      .map(s => <CardCategoria key={s.id} cat={s} isSub />)
+                    }
+                  </div>
                 </div>
-                <div className="space-y-2">
-                  <AnimatePresence mode="popLayout">
-                    {subcategorias.map(cat => <CardCategoria key={cat.id} cat={cat} isSub />)}
-                  </AnimatePresence>
-                </div>
-              </div>
-            )}
+              )}
+            </AnimatePresence>
           </div>
         )}
       </div>
@@ -422,22 +423,61 @@ export default function CategoriasPage() {
             </div>
           )}
 
-          {/* Vincular como subcategoria (apenas para DESPESA) */}
-          {(tipoWatch === 'DESPESA' || editando?.tipo === 'DESPESA') && (
-            <div>
-              <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 block">
-                Subcategoria de... <span className="normal-case font-normal">(opcional)</span>
+          {/* Hierarquia — Principal ou Subcategoria */}
+          <div>
+            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 block">Nível da Categoria</label>
+            <div className="flex gap-2 p-1 bg-slate-50 rounded-2xl border border-slate-100">
+              <button
+                type="button"
+                onClick={() => {
+                  setIsSub(false)
+                  setValue('parent_id', null)
+                }}
+                className={`flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                  !isSub ? 'bg-white text-indigo-600 shadow-sm' : 'text-slate-400 hover:text-slate-600'
+                }`}
+              >
+                <Tag size={14} />
+                Principal
+              </button>
+              <button
+                type="button"
+                onClick={() => setIsSub(true)}
+                className={`flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                  isSub ? 'bg-white text-indigo-600 shadow-sm' : 'text-slate-400 hover:text-slate-600'
+                }`}
+              >
+                <Layers size={14} />
+                Subcategoria
+              </button>
+            </div>
+          </div>
+
+          {/* Vincular como subcategoria (Mostra se isSub for true) */}
+          {isSub && (
+            <motion.div
+              initial={{ opacity: 0, y: -10 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="space-y-2"
+            >
+              <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block">
+                Vincular à Categoria...
               </label>
               <select {...register('parent_id')} className="input-field">
-                <option value="">— Nenhuma (Categoria Principal) —</option>
-                {mainsDespesa
-                  .filter(c => c.id !== editando?.id)
+                <option value="">— Selecione uma categoria pai —</option>
+                {todasCategorias
+                  .filter(c => c.tipo === tipoWatch && !c.parent_id && c.id !== editando?.id)
                   .map(c => (
                     <option key={c.id} value={c.id}>{c.nome}</option>
                   ))
                 }
               </select>
-            </div>
+              {isSub && !watch('parent_id') && (
+                <p className="text-[10px] text-amber-500 font-bold uppercase tracking-tight">
+                  Selecione uma categoria principal para esta subcategoria
+                </p>
+              )}
+            </motion.div>
           )}
 
           <div className="flex justify-end gap-3 pt-2 border-t border-slate-50">
